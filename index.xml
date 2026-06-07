@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<index version="1" name="Mr. Frenkie" commit="436ba7c144d028eb99bb7604a1535c8d3e47f32b">
+  <category name="Mr. Frenkie/Audio Editing">
+    <reapack name="transient_detector.lua" type="script" desc="Frenkie Transient Detector">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaPack Publisher Test\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0.0" author="Mr. Frenkie" time="2026-06-07T19:52:58Z">
+        <changelog><![CDATA[+ Initial release]]></changelog>
+        <source main="main" file="Mr. Frenkie/Audio Editing/Frenkie Transient Detector/Frenkie Transient Detector UI.lua">https://github.com/mrfrenkie/ReaPack/raw/436ba7c144d028eb99bb7604a1535c8d3e47f32b/Mr.%20Frenkie/Audio%20Editing/Frenkie%20Transient%20Detector/Frenkie%20Transient%20Detector%20UI.lua</source>
+        <source file="Mr. Frenkie/Audio Editing/Frenkie Transient Detector/reaper_frenkie_TransientDetector.json">https://github.com/mrfrenkie/ReaPack/raw/436ba7c144d028eb99bb7604a1535c8d3e47f32b/Mr.%20Frenkie/Audio%20Editing/Frenkie%20Transient%20Detector/reaper_frenkie_TransientDetector.json</source>
+        <source platform="win64" type="extension" file="reaper_frenkie_TransientDetector.dll">https://github.com/mrfrenkie/ReaPack/raw/436ba7c144d028eb99bb7604a1535c8d3e47f32b/UserPlugins/reaper_frenkie_TransientDetector.dll</source>
+        <source platform="darwin-arm64" type="extension" file="reaper_frenkie_TransientDetector.dylib">https://github.com/mrfrenkie/ReaPack/raw/436ba7c144d028eb99bb7604a1535c8d3e47f32b/UserPlugins/reaper_frenkie_TransientDetector.dylib</source>
+      </version>
+    </reapack>
+  </category>
+  <metadata>
+    <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 Frenkie Transient Detector\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 Installation\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Copy and paste this URL in Extensions > ReaPack > Import a repository:\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \f1 https://github.com/mrfrenkie/ReaPack/raw/master/index.xml\par}
+}
+]]></description>
+  </metadata>
+</index>
