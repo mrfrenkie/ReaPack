@@ -1,4 +1,4 @@
-# Frenkie Universal Third Creator
+# Mr. Frenkie
 
 ## Installation
 
