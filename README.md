@@ -1,4 +1,4 @@
-# Frenkie Transient Detector
+# Frenkie Inspector Panel
 
 ## Installation
 

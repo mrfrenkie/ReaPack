@@ -1,0 +1,60 @@
+-- @description Frenkie Inspector Panel
+-- @version 4.0b2
+-- @author Mr. Frenkie
+-- @metapackage
+-- @about
+--  # Package
+--  
+--  Short package description.
+-- @changelog
+--  + отказ от SWS и ReasCript
+--  + Rate для x2 и /2
+--  + Кнопка "Открыть инструмент"
+--  + Стрелка выпадающего списка стретч режимов 
+--  + Двойной клик для сброса везде
+--  + Opt везде редактирует поля ввода
+--  + сотые числа для Pitch и BPM
+--  + Опция в настройках Reaper - фильтры всегда в начале потока
+-- @provides
+--   [main] Frenkie Inspector Panel/Frenkie Item Properties.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/Frenkie Item Properties.lua
+--   Frenkie Inspector Panel/ItemProperties/Core.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Core.lua
+--   Frenkie Inspector Panel/ItemProperties/Fader.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Fader.lua
+--   Frenkie Inspector Panel/ItemProperties/Item.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Item.lua
+--   Frenkie Inspector Panel/ItemProperties/MIDI Transpose and Monitor.jsfx > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/MIDI Transpose and Monitor.jsfx
+--   Frenkie Inspector Panel/ItemProperties/Pitch.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Pitch.lua
+--   Frenkie Inspector Panel/ItemProperties/Take.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Take.lua
+--   Frenkie Inspector Panel/ItemProperties/Theme.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Theme.lua
+--   Frenkie Inspector Panel/ItemProperties/TimestretchWidget.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/TimestretchWidget.lua
+--   Frenkie Inspector Panel/ItemProperties/Track.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Track.lua
+--   Frenkie Inspector Panel/ItemProperties/UI.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/UI.lua
+--   Frenkie Inspector Panel/ItemProperties/UIComponents.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/UIComponents.lua
+--   Frenkie Inspector Panel/ItemProperties/Utils.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Utils.lua
+--   Frenkie Inspector Panel/ItemProperties/fonts/Glifs.ttf > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/fonts/Glifs.ttf
+--   Frenkie Inspector Panel/ItemProperties/fonts/Roboto-Regular.ttf > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/fonts/Roboto-Regular.ttf
+--   Frenkie Inspector Panel/ItemProperties/icons/Icon Source/Loop.afdesign > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/Loop.afdesign
+--   Frenkie Inspector Panel/ItemProperties/icons/Icon Source/Muted.afdesign > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/Muted.afdesign
+--   Frenkie Inspector Panel/ItemProperties/icons/Icon Source/locked.afdesign > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/locked.afdesign
+--   Frenkie Inspector Panel/ItemProperties/icons/Icon Source/reverse.afdesign > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/reverse.afdesign
+--   Frenkie Inspector Panel/ItemProperties/icons/Instr-icon.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Instr-icon.png
+--   Frenkie Inspector Panel/ItemProperties/icons/audio-item.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/audio-item.png
+--   Frenkie Inspector Panel/ItemProperties/icons/default-icon.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/default-icon.png
+--   Frenkie Inspector Panel/ItemProperties/icons/locked mixed.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/locked mixed.png
+--   Frenkie Inspector Panel/ItemProperties/icons/locked.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/locked.png
+--   Frenkie Inspector Panel/ItemProperties/icons/looped mixed.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/looped mixed.png
+--   Frenkie Inspector Panel/ItemProperties/icons/looped.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/looped.png
+--   Frenkie Inspector Panel/ItemProperties/icons/midi-item.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/midi-item.png
+--   Frenkie Inspector Panel/ItemProperties/icons/multi-item.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/multi-item.png
+--   Frenkie Inspector Panel/ItemProperties/icons/muted mixed.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/muted mixed.png
+--   Frenkie Inspector Panel/ItemProperties/icons/muted.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/muted.png
+--   Frenkie Inspector Panel/ItemProperties/icons/reversed mixed.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/reversed mixed.png
+--   Frenkie Inspector Panel/ItemProperties/icons/reversed.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/reversed.png
+--   Frenkie Inspector Panel/ItemProperties/icons/track-icon.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/track-icon.png
+--   Frenkie Inspector Panel/ItemProperties/icons/unlocked.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/unlocked.png
+--   Frenkie Inspector Panel/ItemProperties/icons/unlooped.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/unlooped.png
+--   Frenkie Inspector Panel/ItemProperties/icons/unmuted.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/unmuted.png
+--   Frenkie Inspector Panel/ItemProperties/icons/unreversed.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/unreversed.png
+--   Frenkie Inspector Panel/ItemProperties/jsfx.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/jsfx.lua
+--   [win64 extension] ../../UserPlugins/reaper_frenkie_core.dll > reaper_frenkie_core.dll
+--   [darwin-arm64 extension] ../../UserPlugins/reaper_frenkie_core.dylib > reaper_frenkie_core.dylib
+
+-- Generated by ReaPack Publisher.
