@@ -1,22 +1,22 @@
 -- @noindex
 
--- @description Select Chord Roots
+-- @description Select Chord Fifths
 -- @author Trae AI
 -- @version 2.0
 -- @about
---   This script selects the root notes of chords in MIDI items.
+--   This script selects the fifth notes of chords in MIDI items.
 --   Uses the proven chord recognition logic from Lil Chordbox by Ilias Poulakis.
 --   Supports chord inversions (slash chords) where any chord tone can be in the bass.
---   Examples: Am/C (A minor with C in bass), Am/E (A minor with E in bass)
+--   For altered chords, selects the appropriate fifth (b5, #5, or perfect 5th).
+--   Examples: C7b5 (selects Gb), C7#5 (selects G#), Cmaj7 (selects G)
 -- @changelog
---   v2.0 - Replaced chord recognition with Lil Chordbox logic for better accuracy
---   v1.1 - Added support for chord inversions and improved chord recognition
+--   v2.0 - Replaced chord recognition with Lil Chordbox logic, improved fifth detection
 --   v1.0 - Initial release
 -- @provides
---   [midi_editor] .
+--   [main=midi_editor] ./Select_Chord_Fifths.lua
 -- @donation https://example.com
 
--- Select Chord Roots
+-- Select Chord Fifths
 -- Script by Trae AI
 -- Based on chord database from Lil Chordbox by Ilias Poulakis
 
@@ -98,12 +98,12 @@ function main()
   reaper.MIDI_SelectAll(take, false)
   -- Process each chord
   for _, notes in ipairs(chords) do
-    -- Find the root note
-    local root_note_index = find_chord_root(notes)
+    -- Find the fifth note
+    local fifth_note_index = find_chord_fifth(notes)
     
-    if root_note_index then
-      -- Select only this root note
-      reaper.MIDI_SetNote(take, root_note_index, true, nil, nil, nil, nil, nil, nil, nil)
+    if fifth_note_index then
+      -- Select only this fifth note
+      reaper.MIDI_SetNote(take, fifth_note_index, true, nil, nil, nil, nil, nil, nil, nil)
     end
   end
   
@@ -111,7 +111,7 @@ function main()
   reaper.MIDI_Sort(take)
   
   -- End undo block
-  reaper.Undo_EndBlock("Select Chord Roots", -1)
+  reaper.Undo_EndBlock("Select Chord Fifths", -1)
   
   -- Update the MIDI editor view
   reaper.MIDIEditor_OnCommand(reaper.MIDIEditor_GetActive(), 40435) -- Refresh MIDI editor
@@ -244,6 +244,107 @@ chord_names['1 4 6 8'] = 'm add11'
 chord_names['1 5 6 8'] = 'maj add11'
 chord_names['1 5 10 11'] = '7 add13'
 
+-- Fifth information for each chord type
+local chord_fifths = {
+  -- Major chords have perfect fifth (interval 8)
+  ['1 5 8'] = 8,
+  ['1 8 12'] = 8, -- maj7 omit3
+  ['1 5 12'] = nil, -- omit5
+  ['1 5 8 12'] = 8,
+  ['1 3 5 12'] = nil, -- omit5
+  ['1 3 5 8 12'] = 8,
+  ['1 3 5 6 12'] = nil, -- omit5
+  ['1 5 6 8 12'] = 8,
+  ['1 3 5 6 8 12'] = 8,
+  ['1 3 5 6 10 12'] = nil, -- omit5
+  ['1 5 6 8 10 12'] = 8,
+  ['1 3 5 6 8 10 12'] = 8,
+  ['1 8 10'] = 8, -- 6 omit3
+  ['1 5 8 10'] = 8,
+  ['1 3 5 10'] = nil, -- omit5
+  ['1 3 5 8 10'] = 8,
+  
+  -- Dominant/Seventh chords have perfect fifth (interval 8)
+  ['1 8 11'] = 8, -- 7 omit3
+  ['1 5 11'] = nil, -- omit5
+  ['1 5 8 11'] = 8,
+  ['1 3 8 11'] = 8, -- 9 omit3
+  ['1 3 5 11'] = nil, -- omit5
+  ['1 3 5 8 11'] = 8,
+  ['1 3 5 10 11'] = nil, -- omit5
+  ['1 5 8 10 11'] = 8,
+  ['1 3 5 8 10 11'] = 8,
+  ['1 5 7 11'] = nil, -- omit5
+  ['1 5 7 8 11'] = 8,
+  ['1 3 5 7 11'] = nil, -- omit5
+  ['1 3 5 7 8 11'] = 8,
+  
+  -- Altered chords
+  ['1 2 5 11'] = nil, -- omit5
+  ['1 2 5 8 11'] = 8, -- 7b9
+  ['1 2 5 7 8 11'] = 8, -- 7b9#11
+  ['1 4 5 11'] = nil, -- omit5
+  ['1 4 5 8 11'] = 8, -- 7#9
+  ['1 4 5 9 11'] = 9, -- 7#5#9 - augmented fifth
+  ['1 4 5 7 8 11'] = 8, -- 7#9#11
+  ['1 2 5 8 10 11'] = 8, -- 13b9
+  ['1 3 5 7 8 10 11'] = 8, -- 13#11
+  
+  -- Suspended chords have perfect fifth (interval 8)
+  ['1 6 8'] = 8, -- sus4
+  ['1 3 8'] = 8, -- sus2
+  ['1 6 11'] = nil, -- omit5
+  ['1 6 8 11'] = 8, -- 7sus4
+  ['1 3 6 11'] = nil, -- omit5
+  ['1 6 8 11'] = 8, -- 11 omit9
+  ['1 3 6 8 11'] = 8, -- 11
+  
+  -- Minor chords have perfect fifth (interval 8)
+  ['1 4 8'] = 8,
+  ['1 4 11'] = nil, -- omit5
+  ['1 4 8 11'] = 8,
+  ['1 4 12'] = nil, -- omit5
+  ['1 4 8 12'] = 8,
+  ['1 3 4 12'] = nil, -- omit5
+  ['1 3 4 8 12'] = 8,
+  ['1 3 4 11'] = nil, -- omit5
+  ['1 3 4 8 11'] = 8,
+  ['1 3 4 6 11'] = nil, -- omit5
+  ['1 4 6 8 11'] = 8,
+  ['1 3 4 6 8 11'] = 8,
+  ['1 3 4 6 10 11'] = nil, -- omit5
+  ['1 4 6 8 10 11'] = 8,
+  ['1 3 4 6 8 10 11'] = 8,
+  ['1 4 8 10'] = 8,
+  ['1 3 4 10'] = nil, -- omit5
+  ['1 3 4 8 10'] = 8,
+  
+  -- Diminished chords have diminished fifth (interval 7)
+  ['1 4 7'] = 7, -- dim
+  ['1 4 7 10'] = 7, -- dim7
+  ['1 4 7 11'] = 7, -- m7b5
+  ['1 2 4 8 11'] = 8, -- m7b9
+  ['1 2 4 7 11'] = 7, -- m7b5b9
+  ['1 2 4 11'] = nil, -- omit5
+  ['1 3 4 7 11'] = 7, -- m9b5
+  ['1 3 4 6 7 11'] = 7, -- m11b5
+  ['1 3 5 7 10 11'] = 7, -- 13b5
+  
+  -- Augmented chords have augmented fifth (interval 9)
+  ['1 5 9'] = 9, -- aug
+  ['1 5 9 11'] = 9, -- aug7
+  ['1 5 9 12'] = 9, -- aug/maj7
+  
+  -- Add chords
+  ['1 3 4'] = nil, -- m add9 omit5
+  ['1 3 4 8'] = 8, -- m add9
+  ['1 3 5'] = nil, -- maj add9 omit5
+  ['1 3 5 8'] = 8, -- maj add9
+  ['1 4 6 8'] = 8, -- m add11
+  ['1 5 6 8'] = 8, -- maj add11
+  ['1 5 10 11'] = 8, -- 7 add13
+}
+
 local note_names = {'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'}
 
 -- Current chord names (loaded from chord_names table)
@@ -332,8 +433,8 @@ function IdentifyChord(notes)
     end
 end
 
--- Function to find the root note index of a chord
-function find_chord_root(notes)
+-- Function to find the fifth note index of a chord
+function find_chord_fifth(notes)
   if #notes < 2 then return nil end
   
   -- Extract pitches and create mapping
@@ -355,12 +456,21 @@ function find_chord_root(notes)
   local chord_key, chord_root, inversion_root = IdentifyChord(notes)
   
   if chord_key and chord_root then
-    -- Return the index of the identified root note
-    return pitch_to_index[chord_root]
+    -- Get the fifth interval for this chord type
+    local fifth_interval = chord_fifths[chord_key]
+    
+    if fifth_interval then
+      -- Look for the fifth note relative to the chord root
+      for _, note in ipairs(notes) do
+        if (note.pitch - chord_root) % 12 == fifth_interval - 1 then
+          return note.index
+        end
+      end
+    end
   end
   
-  -- If no chord type matches, default to the lowest note
-  return pitch_to_index[bass_pitch]
+  -- If no chord type matches or fifth not found, return nil
+  return nil
 end
 
 -- Run the script
