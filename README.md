@@ -1,4 +1,4 @@
-# Frenkie Inspector Panel
+# Frenkie Universal Third Creator
 
 ## Installation
 
