@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Mr. Frenkie" commit="436ba7c144d028eb99bb7604a1535c8d3e47f32b">
+<index version="1" name="Mr. Frenkie" commit="c83e5092aea66ef4c4ee668b84c725c03568d13d">
   <category name="Mr. Frenkie/Audio Editing">
     <reapack name="transient_detector.lua" type="script" desc="Frenkie Transient Detector">
       <metadata>
@@ -20,12 +20,76 @@
       </version>
     </reapack>
   </category>
+  <category name="Mr. Frenkie/Widgets">
+    <reapack name="mr_frenkie_item_properties.lua" type="script" desc="Frenkie Inspector Panel">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 Package\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Short package description.\par}
+}
+]]></description>
+      </metadata>
+      <version name="4.0b2" author="Mr. Frenkie" time="2026-06-07T20:08:36Z">
+        <changelog><![CDATA[+ отказ от SWS и ReasCript
++ Rate для x2 и /2
++ Кнопка "Открыть инструмент"
++ Стрелка выпадающего списка стретч режимов 
++ Двойной клик для сброса везде
++ Opt везде редактирует поля ввода
++ сотые числа для Pitch и BPM
++ Опция в настройках Reaper - фильтры всегда в начале потока]]></changelog>
+        <source main="main" file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/Frenkie Item Properties.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/Frenkie%20Item%20Properties.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Core.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/Core.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Fader.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/Fader.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Item.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/Item.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/MIDI Transpose and Monitor.jsfx">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/MIDI%20Transpose%20and%20Monitor.jsfx</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Pitch.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/Pitch.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Take.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/Take.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Theme.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/Theme.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/TimestretchWidget.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/TimestretchWidget.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Track.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/Track.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/UI.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/UI.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/UIComponents.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/UIComponents.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Utils.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/Utils.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/fonts/Glifs.ttf">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/fonts/Glifs.ttf</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/fonts/Roboto-Regular.ttf">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/fonts/Roboto-Regular.ttf</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/Loop.afdesign">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/Icon%20Source/Loop.afdesign</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/Muted.afdesign">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/Icon%20Source/Muted.afdesign</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/locked.afdesign">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/Icon%20Source/locked.afdesign</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/reverse.afdesign">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/Icon%20Source/reverse.afdesign</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Instr-icon.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/Instr-icon.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/audio-item.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/audio-item.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/default-icon.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/default-icon.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/locked mixed.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/locked%20mixed.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/locked.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/locked.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/looped mixed.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/looped%20mixed.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/looped.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/looped.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/midi-item.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/midi-item.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/multi-item.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/multi-item.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/muted mixed.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/muted%20mixed.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/muted.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/muted.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/reversed mixed.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/reversed%20mixed.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/reversed.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/reversed.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/track-icon.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/track-icon.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/unlocked.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/unlocked.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/unlooped.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/unlooped.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/unmuted.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/unmuted.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/unreversed.png">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/icons/unreversed.png</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/jsfx.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/jsfx.lua</source>
+        <source platform="win64" type="extension" file="reaper_frenkie_core.dll">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/UserPlugins/reaper_frenkie_core.dll</source>
+        <source platform="darwin-arm64" type="extension" file="reaper_frenkie_core.dylib">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/UserPlugins/reaper_frenkie_core.dylib</source>
+      </version>
+    </reapack>
+  </category>
   <metadata>
     <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 Frenkie Transient Detector\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 Frenkie Inspector Panel\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 Installation\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 Copy and paste this URL in Extensions > ReaPack > Import a repository:\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 \f1 https://github.com/mrfrenkie/ReaPack/raw/master/index.xml\par}
