@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Mr. Frenkie" commit="d699fa605bbbf6ff5c153e2fa43c3886e3f9fb07">
+<index version="1" name="Mr. Frenkie" commit="49ed16a04b252feb04fa07867c81a6a1335870a6">
   <category name="Mr. Frenkie/Audio Editing">
     <reapack name="transient_detector.lua" type="script" desc="Frenkie Transient Detector">
       <metadata>
@@ -21,6 +21,21 @@
     </reapack>
   </category>
   <category name="Mr. Frenkie/MIDI Editor">
+    <reapack name="frenkie_chords_select_3rd.lua" type="script" desc="Frenkie Chords Select 3rd">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \u1042 ?\u1099 ?\u1076 ?\u1077 ?\u1083 ?\u1103 ?\u1077 ?\u1090 ? \u1090 ?\u1088 ?\u1077 ?\u1090 ?\u1100 ?\u1102 ? \u1089 ?\u1090 ?\u1091 ?\u1087 ?\u1077 ?\u1085 ?\u1100 ? \u1074 ?\u1089 ?\u1077 ?\u1093 ? \u1072 ?\u1082 ?\u1082 ?\u1086 ?\u1088 ?\u1076 ?\u1086 ?\u1074 ? \u1074 ? MIDI Editor, \u1080 ?\u1083 ?\u1080 ? \u1090 ?\u1088 ?\u1077 ?\u1090 ?\u1100 ?\u1102 ? \u1089 ?\u1090 ?\u1091 ?\u1087 ?\u1077 ?\u1085 ?\u1100 ? \u1074 ?\u1099 ?\u1076 ?\u1077 ?\u1083 ?\u1077 ?\u1085 ?\u1085 ?\u1086 ?\u1075 ?\u1086 ? \u1072 ?\u1082 ?\u1082 ?\u1086 ?\u1088 ?\u1076 ?\u1072 ?\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0.0" author="Mr. Frenkie" time="2026-06-07T23:22:12Z">
+        <changelog><![CDATA[Выделяет третью ступень всех аккордов в MIDI Editor, или третью ступень выделенного аккорда]]></changelog>
+        <source main="midi_editor" file="Mr. Frenkie/MIDI Editor/Frenkie Chords Select 3rd.lua">https://github.com/mrfrenkie/ReaPack/raw/49ed16a04b252feb04fa07867c81a6a1335870a6/Mr.%20Frenkie/MIDI%20Editor/Frenkie%20Chords%20Select%203rd.lua</source>
+      </version>
+    </reapack>
     <reapack name="frenkie_chords_select_fifth.lua" type="script" desc="Frenkie Chords Select Fifth">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
