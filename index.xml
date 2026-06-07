@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Mr. Frenkie" commit="1b226306b9b70d5a0ea45132bb8e44abcfefd155">
+<index version="1" name="Mr. Frenkie" commit="d699fa605bbbf6ff5c153e2fa43c3886e3f9fb07">
   <category name="Mr. Frenkie/Audio Editing">
     <reapack name="transient_detector.lua" type="script" desc="Frenkie Transient Detector">
       <metadata>
@@ -21,7 +21,7 @@
     </reapack>
   </category>
   <category name="Mr. Frenkie/MIDI Editor">
-    <reapack name="frenkie_chords_select_3rd.lua" type="script" desc="Frenkie Chords Select Fifth">
+    <reapack name="frenkie_chords_select_fifth.lua" type="script" desc="Frenkie Chords Select Fifth">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
@@ -31,9 +31,9 @@
 }
 ]]></description>
       </metadata>
-      <version name="1.0.0" author="Mr. Frenkie" time="2026-06-07T23:00:43Z">
+      <version name="1.0.0" author="Mr. Frenkie" time="2026-06-07T23:19:54Z">
         <changelog><![CDATA[Выделяет седьмую ступень всех аккордов в MIDI Editor, или седьмую ступень выделенного аккорда]]></changelog>
-        <source main="midi_editor" file="Mr. Frenkie/MIDI Editor/Frenkie Chords Select Fifth.lua">https://github.com/mrfrenkie/ReaPack/raw/1b226306b9b70d5a0ea45132bb8e44abcfefd155/Mr.%20Frenkie/MIDI%20Editor/Frenkie%20Chords%20Select%20Fifth.lua</source>
+        <source main="midi_editor" file="Mr. Frenkie/MIDI Editor/Frenkie Chords Select Fifth.lua">https://github.com/mrfrenkie/ReaPack/raw/d699fa605bbbf6ff5c153e2fa43c3886e3f9fb07/Mr.%20Frenkie/MIDI%20Editor/Frenkie%20Chords%20Select%20Fifth.lua</source>
       </version>
     </reapack>
     <reapack name="frenkie_universal_seventh.lua" type="script" desc="Frenkie Universal 7th Creator">
