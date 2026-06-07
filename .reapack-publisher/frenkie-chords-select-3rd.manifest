@@ -2,6 +2,6 @@
 .github/workflows/deploy.yml
 .gitignore
 .reapack-index.conf
-Mr. Frenkie/MIDI Editor/Frenkie Chords Select 3rd.lua
-Mr. Frenkie/MIDI Editor/frenkie_chords_select_3rd.lua
+Mr. Frenkie/Frenkie Chords Select Root.lua
+Mr. Frenkie/frenkie_chords_select_3rd.lua
 README.md

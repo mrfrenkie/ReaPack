@@ -1,25 +1,22 @@
 -- @noindex
 
--- @description Select Chord Thirds
+-- @description Select Chord Roots
 -- @author Trae AI
--- @version 2.1
+-- @version 2.0
 -- @about
---   This script selects the third notes of chords and upper notes of intervals in MIDI items.
+--   This script selects the root notes of chords in MIDI items.
 --   Uses the proven chord recognition logic from Lil Chordbox by Ilias Poulakis.
 --   Supports chord inversions (slash chords) where any chord tone can be in the bass.
---   For Sus chords (Sus2/Sus4), selects the 2nd or 4th instead of the missing 3rd.
---   For intervals (dyads), selects the upper note.
---   Examples: Am/C (A minor with C in bass), Csus4 (selects F), Dsus2 (selects E), A minor 3rd (selects C), A minor 10th (selects C)
+--   Examples: Am/C (A minor with C in bass), Am/E (A minor with E in bass)
 -- @changelog
---   v2.1 - Added support for intervals (dyads) including compound intervals
---   v2.0 - Replaced chord recognition with Lil Chordbox logic, added Sus chord support
+--   v2.0 - Replaced chord recognition with Lil Chordbox logic for better accuracy
 --   v1.1 - Added support for chord inversions and improved chord recognition
 --   v1.0 - Initial release
 -- @provides
---   [main=midi_editor] ./Select_Chord_Thirds.lua
+--   [midi_editor] .
 -- @donation https://example.com
 
--- Select Chord Thirds
+-- Select Chord Roots
 -- Script by Trae AI
 -- Based on chord database from Lil Chordbox by Ilias Poulakis
 
@@ -57,8 +54,6 @@ function main()
       selected = selected
     })
   end
-  
-  
   
   local selected_notes = {}
   for _, note in ipairs(all_notes) do
@@ -100,34 +95,29 @@ function main()
     chords = build_chords(all_notes)
   end
   
-
-  
   reaper.MIDI_SelectAll(take, false)
   -- Process each chord
   for _, notes in ipairs(chords) do
-    -- Find the third note
-    local third_note_index = find_chord_third(notes)
+    -- Find the root note
+    local root_note_index = find_chord_root(notes)
     
-    if third_note_index then
-      -- Select only this third note
-      reaper.MIDI_SetNote(take, third_note_index, true, nil, nil, nil, nil, nil, nil, nil)
+    if root_note_index then
+      -- Select only this root note
+      reaper.MIDI_SetNote(take, root_note_index, true, nil, nil, nil, nil, nil, nil, nil)
     end
   end
   
   -- Update the MIDI editor
   reaper.MIDI_Sort(take)
   
-  -- Update the MIDI editor
-  reaper.MIDI_Sort(take)
-  
   -- End undo block
-  reaper.Undo_EndBlock("Select Chord Thirds", -1)
+  reaper.Undo_EndBlock("Select Chord Roots", -1)
   
   -- Update the MIDI editor view
   reaper.MIDIEditor_OnCommand(reaper.MIDIEditor_GetActive(), 40435) -- Refresh MIDI editor
 end
 
--- Chord names database from Lil Chordbox with third information
+-- Chord names database from Lil Chordbox
 local chord_names = {}
 
 -- Dyads
@@ -254,133 +244,6 @@ chord_names['1 4 6 8'] = 'm add11'
 chord_names['1 5 6 8'] = 'maj add11'
 chord_names['1 5 10 11'] = '7 add13'
 
--- Third information for each chord type
-local chord_thirds = {
-  -- Dyads (intervals) - select the upper note (second interval)
-  ['1 2'] = 2,  -- minor 2nd
-  ['1 3'] = 3,  -- major 2nd
-  ['1 4'] = 4,  -- minor 3rd
-  ['1 5'] = 5,  -- major 3rd
-  ['1 6'] = 6,  -- perfect 4th
-  ['1 7'] = 7,  -- tritone (5-)
-  ['1 8'] = 8,  -- perfect 5th
-  ['1 9'] = 9,  -- minor 6th
-  ['1 10'] = 10, -- major 6th
-  ['1 11'] = 11, -- minor 7th
-  ['1 12'] = 12, -- major 7th
-  ['1 13'] = 13, -- octave
-  -- Compound intervals
-  ['1 14'] = 14, -- minor 9th
-  ['1 15'] = 15, -- major 9th
-  ['1 16'] = 16, -- minor 10th
-  ['1 17'] = 17, -- major 10th
-  ['1 18'] = 18, -- perfect 11th
-  ['1 19'] = 19, -- minor 12th
-  ['1 20'] = 20, -- perfect 12th
-  ['1 21'] = 21, -- minor 13th
-  ['1 22'] = 22, -- major 13th
-  ['1 23'] = 23, -- minor 14th
-  ['1 24'] = 24, -- major 14th
-  
-  -- Major chords have major third (interval 5)
-  ['1 5 8'] = 5,
-  ['1 8 12'] = nil, -- omit3
-  ['1 5 12'] = 5,
-  ['1 5 8 12'] = 5,
-  ['1 3 5 12'] = 5,
-  ['1 3 5 8 12'] = 5,
-  ['1 3 5 6 12'] = 5,
-  ['1 5 6 8 12'] = 5,
-  ['1 3 5 6 8 12'] = 5,
-  ['1 3 5 6 10 12'] = 5,
-  ['1 5 6 8 10 12'] = 5,
-  ['1 3 5 6 8 10 12'] = 5,
-  ['1 8 10'] = nil, -- omit3
-  ['1 5 8 10'] = 5,
-  ['1 3 5 10'] = 5,
-  ['1 3 5 8 10'] = 5,
-  
-  -- Dominant/Seventh chords have major third (interval 5)
-  ['1 8 11'] = nil, -- omit3
-  ['1 5 11'] = 5,
-  ['1 5 8 11'] = 5,
-  ['1 3 8 11'] = 5,
-  ['1 3 5 11'] = 5,
-  ['1 3 5 8 11'] = 5,
-  ['1 3 5 10 11'] = 5,
-  ['1 5 8 10 11'] = 5,
-  ['1 3 5 8 10 11'] = 5,
-  ['1 5 7 11'] = 5,
-  ['1 5 7 8 11'] = 5,
-  ['1 3 5 7 11'] = 5,
-  ['1 3 5 7 8 11'] = 5,
-  
-  -- Altered chords have major third (interval 5)
-  ['1 2 5 11'] = 5,
-  ['1 2 5 8 11'] = 5,
-  ['1 2 5 7 8 11'] = 5,
-  ['1 4 5 11'] = 5,
-  ['1 4 5 8 11'] = 5,
-  ['1 4 5 9 11'] = 5,
-  ['1 4 5 7 8 11'] = 5,
-  ['1 2 5 8 10 11'] = 5,
-  ['1 3 5 7 8 10 11'] = 5,
-  
-  -- Suspended chords - use 2nd or 4th instead of 3rd
-  ['1 6 8'] = 6, -- sus4 - use 4th
-  ['1 3 8'] = 3, -- sus2 - use 2nd
-  ['1 6 11'] = 6, -- 7sus4 - use 4th
-  ['1 6 8 11'] = 6, -- 7sus4 - use 4th
-  ['1 3 6 11'] = 6, -- 11 - use 4th (11th is priority)
-  ['1 6 8 11'] = 6, -- 11 omit9 - use 4th
-  ['1 3 6 8 11'] = 6, -- 11 - use 4th (11th is priority)
-  
-  -- Minor chords have minor third (interval 4)
-  ['1 4 8'] = 4,
-  ['1 4 11'] = 4,
-  ['1 4 8 11'] = 4,
-  ['1 4 12'] = 4,
-  ['1 4 8 12'] = 4,
-  ['1 3 4 12'] = 4,
-  ['1 3 4 8 12'] = 4,
-  ['1 3 4 11'] = 4,
-  ['1 3 4 8 11'] = 4,
-  ['1 3 4 6 11'] = 4,
-  ['1 4 6 8 11'] = 4,
-  ['1 3 4 6 8 11'] = 4,
-  ['1 3 4 6 10 11'] = 4,
-  ['1 4 6 8 10 11'] = 4,
-  ['1 3 4 6 8 10 11'] = 4,
-  ['1 4 8 10'] = 4,
-  ['1 3 4 10'] = 4,
-  ['1 3 4 8 10'] = 4,
-  
-  -- Diminished chords have minor third (interval 4)
-  ['1 4 7'] = 4,
-  ['1 4 7 10'] = 4,
-  ['1 4 7 11'] = 4,
-  ['1 2 4 8 11'] = 4,
-  ['1 2 4 7 11'] = 4,
-  ['1 2 4 11'] = 4,
-  ['1 3 4 7 11'] = 4,
-  ['1 3 4 6 7 11'] = 4,
-  ['1 3 5 7 10 11'] = 5, -- 13b5 has major third
-  
-  -- Augmented chords have major third (interval 5)
-  ['1 5 9'] = 5,
-  ['1 5 9 11'] = 5,
-  ['1 5 9 12'] = 5,
-  
-  -- Add chords
-  ['1 3 4'] = 4, -- m add9 omit5
-  ['1 3 4 8'] = 4, -- m add9
-  ['1 3 5'] = 5, -- maj add9 omit5
-  ['1 3 5 8'] = 5, -- maj add9
-  ['1 4 6 8'] = 4, -- m add11
-  ['1 5 6 8'] = 5, -- maj add11
-  ['1 5 10 11'] = 5, -- 7 add13
-}
-
 local note_names = {'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'}
 
 -- Current chord names (loaded from chord_names table)
@@ -406,6 +269,7 @@ function IdentifyChord(notes)
         local note = notes[i]
         root = note.pitch < root and note.pitch or root
     end
+    
     -- Remove duplicates and move notes closer
     local intervals = {}
     for i = 1, #notes do
@@ -468,8 +332,8 @@ function IdentifyChord(notes)
     end
 end
 
--- Function to find the third note index of a chord
-function find_chord_third(notes)
+-- Function to find the root note index of a chord
+function find_chord_root(notes)
   if #notes < 2 then return nil end
   
   -- Extract pitches and create mapping
@@ -491,32 +355,12 @@ function find_chord_third(notes)
   local chord_key, chord_root, inversion_root = IdentifyChord(notes)
   
   if chord_key and chord_root then
-    -- Get the third interval for this chord type
-    local third_interval = chord_thirds[chord_key]
-    
-    if third_interval then
-      -- Look for the third note relative to the chord root
-      for _, note in ipairs(notes) do
-        local pitch_diff = note.pitch - chord_root
-        -- For compound intervals (>12), check actual pitch difference
-        if third_interval > 12 then
-          if pitch_diff == third_interval - 1 then
-            return note.index
-          end
-        else
-          -- For regular intervals, use modulo 12
-          if pitch_diff % 12 == third_interval - 1 then
-            return note.index
-          end
-        end
-      end
-    else
-    end
-  else
+    -- Return the index of the identified root note
+    return pitch_to_index[chord_root]
   end
   
-  -- If no chord type matches or third not found, return nil
-  return nil
+  -- If no chord type matches, default to the lowest note
+  return pitch_to_index[bass_pitch]
 end
 
 -- Run the script
