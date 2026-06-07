@@ -3,9 +3,9 @@
 -- @author Mr. Frenkie
 -- @metapackage
 -- @about
---  Выделяет первую ступень всех аккордов в MIDI Editor, или первую (root) ступень выделенного аккорда
+--  Выделяет первую ступень всех аккордов в MIDI Editor, или первую (Root) ступень выделенного аккорда
 -- @changelog
---  Выделяет первую ступень всех аккордов в MIDI Editor, или первую (root) ступень выделенного аккорда
+--  Выделяет первую ступень всех аккордов в MIDI Editor, или первую (Root) ступень выделенного аккорда
 -- @provides
 --   [main=midi_editor] Frenkie Chords Select Root.lua > Mr. Frenkie/MIDI Editor/Frenkie Chords Select Root.lua
 
