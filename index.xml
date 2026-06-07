@@ -1,22 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Mr. Frenkie" commit="55ab6220c49ffebfe89709560da76699da17f6b0">
-  <category name="Mr. Frenkie">
-    <reapack name="frenkie_chords_select_3rd.lua" type="script" desc="Frenkie Chords Select Root">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 \u1042 ?\u1099 ?\u1076 ?\u1077 ?\u1083 ?\u1103 ?\u1077 ?\u1090 ? \u1087 ?\u1077 ?\u1088 ?\u1074 ?\u1091 ?\u1102 ? \u1089 ?\u1090 ?\u1091 ?\u1087 ?\u1077 ?\u1085 ?\u1100 ? \u1074 ?\u1089 ?\u1077 ?\u1093 ? \u1072 ?\u1082 ?\u1082 ?\u1086 ?\u1088 ?\u1076 ?\u1086 ?\u1074 ? \u1074 ? MIDI Editor, \u1080 ?\u1083 ?\u1080 ? \u1087 ?\u1077 ?\u1088 ?\u1074 ?\u1091 ?\u1102 ? (Root) \u1089 ?\u1090 ?\u1091 ?\u1087 ?\u1077 ?\u1085 ?\u1100 ? \u1074 ?\u1099 ?\u1076 ?\u1077 ?\u1083 ?\u1077 ?\u1085 ?\u1085 ?\u1086 ?\u1075 ?\u1086 ? \u1072 ?\u1082 ?\u1082 ?\u1086 ?\u1088 ?\u1076 ?\u1072 ?\par}
-}
-]]></description>
-      </metadata>
-      <version name="1.0.0" author="Mr. Frenkie" time="2026-06-07T22:58:49Z">
-        <changelog><![CDATA[Выделяет первую ступень всех аккордов в MIDI Editor, или первую (Root) ступень выделенного аккорда]]></changelog>
-        <source main="midi_editor" file="Mr. Frenkie/Frenkie Chords Select Root.lua">https://github.com/mrfrenkie/ReaPack/raw/55ab6220c49ffebfe89709560da76699da17f6b0/Mr.%20Frenkie/Frenkie%20Chords%20Select%20Root.lua</source>
-      </version>
-    </reapack>
-  </category>
+<index version="1" name="Mr. Frenkie" commit="1b226306b9b70d5a0ea45132bb8e44abcfefd155">
   <category name="Mr. Frenkie/Audio Editing">
     <reapack name="transient_detector.lua" type="script" desc="Frenkie Transient Detector">
       <metadata>
@@ -38,6 +21,21 @@
     </reapack>
   </category>
   <category name="Mr. Frenkie/MIDI Editor">
+    <reapack name="frenkie_chords_select_3rd.lua" type="script" desc="Frenkie Chords Select Fifth">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \u1042 ?\u1099 ?\u1076 ?\u1077 ?\u1083 ?\u1103 ?\u1077 ?\u1090 ? \u1089 ?\u1077 ?\u1076 ?\u1100 ?\u1084 ?\u1091 ?\u1102 ? \u1089 ?\u1090 ?\u1091 ?\u1087 ?\u1077 ?\u1085 ?\u1100 ? \u1074 ?\u1089 ?\u1077 ?\u1093 ? \u1072 ?\u1082 ?\u1082 ?\u1086 ?\u1088 ?\u1076 ?\u1086 ?\u1074 ? \u1074 ? MIDI Editor, \u1080 ?\u1083 ?\u1080 ? \u1089 ?\u1077 ?\u1076 ?\u1100 ?\u1084 ?\u1091 ?\u1102 ? \u1089 ?\u1090 ?\u1091 ?\u1087 ?\u1077 ?\u1085 ?\u1100 ? \u1074 ?\u1099 ?\u1076 ?\u1077 ?\u1083 ?\u1077 ?\u1085 ?\u1085 ?\u1086 ?\u1075 ?\u1086 ? \u1072 ?\u1082 ?\u1082 ?\u1086 ?\u1088 ?\u1076 ?\u1072 ?\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0.0" author="Mr. Frenkie" time="2026-06-07T23:00:43Z">
+        <changelog><![CDATA[Выделяет седьмую ступень всех аккордов в MIDI Editor, или седьмую ступень выделенного аккорда]]></changelog>
+        <source main="midi_editor" file="Mr. Frenkie/MIDI Editor/Frenkie Chords Select Fifth.lua">https://github.com/mrfrenkie/ReaPack/raw/1b226306b9b70d5a0ea45132bb8e44abcfefd155/Mr.%20Frenkie/MIDI%20Editor/Frenkie%20Chords%20Select%20Fifth.lua</source>
+      </version>
+    </reapack>
     <reapack name="frenkie_universal_seventh.lua" type="script" desc="Frenkie Universal 7th Creator">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
