@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Mr. Frenkie" commit="5768e8e78bbe2a116d49b5b1bb759afbfefe7184">
+<index version="1" name="Mr. Frenkie" commit="03cfa97bce079eab36f72baf98a4ed0ef554d515">
   <category name="Mr. Frenkie/Audio Editing">
     <reapack name="transient_detector.lua" type="script" desc="Frenkie Transient Detector">
       <metadata>
@@ -158,6 +158,28 @@
         <source file="Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/jsfx.lua">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/Mr.%20Frenkie/Widgets/Frenkie%20Inspector%20Panel/ItemProperties/jsfx.lua</source>
         <source platform="win64" type="extension" file="reaper_frenkie_core.dll">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/UserPlugins/reaper_frenkie_core.dll</source>
         <source platform="darwin-arm64" type="extension" file="reaper_frenkie_core.dylib">https://github.com/mrfrenkie/ReaPack/raw/c83e5092aea66ef4c4ee668b84c725c03568d13d/UserPlugins/reaper_frenkie_core.dylib</source>
+      </version>
+    </reapack>
+    <reapack name="new_folder_with_items.lua" type="script" desc="Frenkie Recent Projects">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \u1042 ?\u1080 ?\u1076 ?\u1078 ?\u1077 ?\u1090 ? \u1074 ?\u1072 ?\u1096 ?\u1080 ?\u1093 ? \u1087 ?\u1088 ?\u1086 ?\u1077 ?\u1082 ?\u1090 ?\u1086 ?\u1074 ?\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.1" author="Mr. Frenkie" time="2026-06-07T23:40:06Z">
+        <changelog><![CDATA[Виджет ваших проектов]]></changelog>
+        <source main="main" file="Mr. Frenkie/Widgets/Frenkie Recent Projects/Open Frenkie Recent Projects.lua">https://github.com/mrfrenkie/ReaPack/raw/03cfa97bce079eab36f72baf98a4ed0ef554d515/Mr.%20Frenkie/Widgets/Frenkie%20Recent%20Projects/Open%20Frenkie%20Recent%20Projects.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Recent Projects/Functions/Fonts/Roboto-Regular.ttf">https://github.com/mrfrenkie/ReaPack/raw/03cfa97bce079eab36f72baf98a4ed0ef554d515/Mr.%20Frenkie/Widgets/Frenkie%20Recent%20Projects/Functions/Fonts/Roboto-Regular.ttf</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Recent Projects/Functions/Frenkie Recent Projects Observer.lua">https://github.com/mrfrenkie/ReaPack/raw/03cfa97bce079eab36f72baf98a4ed0ef554d515/Mr.%20Frenkie/Widgets/Frenkie%20Recent%20Projects/Functions/Frenkie%20Recent%20Projects%20Observer.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Recent Projects/Functions/List.lua">https://github.com/mrfrenkie/ReaPack/raw/03cfa97bce079eab36f72baf98a4ed0ef554d515/Mr.%20Frenkie/Widgets/Frenkie%20Recent%20Projects/Functions/List.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Recent Projects/Functions/MiniParser.lua">https://github.com/mrfrenkie/ReaPack/raw/03cfa97bce079eab36f72baf98a4ed0ef554d515/Mr.%20Frenkie/Widgets/Frenkie%20Recent%20Projects/Functions/MiniParser.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Recent Projects/Functions/Theme Dark.lua">https://github.com/mrfrenkie/ReaPack/raw/03cfa97bce079eab36f72baf98a4ed0ef554d515/Mr.%20Frenkie/Widgets/Frenkie%20Recent%20Projects/Functions/Theme%20Dark.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Recent Projects/Functions/Theme Light.lua">https://github.com/mrfrenkie/ReaPack/raw/03cfa97bce079eab36f72baf98a4ed0ef554d515/Mr.%20Frenkie/Widgets/Frenkie%20Recent%20Projects/Functions/Theme%20Light.lua</source>
+        <source file="Mr. Frenkie/Widgets/Frenkie Recent Projects/Functions/UI.lua">https://github.com/mrfrenkie/ReaPack/raw/03cfa97bce079eab36f72baf98a4ed0ef554d515/Mr.%20Frenkie/Widgets/Frenkie%20Recent%20Projects/Functions/UI.lua</source>
       </version>
     </reapack>
   </category>
