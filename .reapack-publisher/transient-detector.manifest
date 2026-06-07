@@ -1,0 +1,9 @@
+.github/workflows/check.yml
+.github/workflows/deploy.yml
+.reapack-index.conf
+Mr. Frenkie/Audio Editing/Frenkie Transient Detector/Frenkie Transient Detector UI.lua
+Mr. Frenkie/Audio Editing/Frenkie Transient Detector/reaper_frenkie_TransientDetector.json
+Mr. Frenkie/Audio Editing/transient_detector.lua
+README.md
+UserPlugins/reaper_frenkie_TransientDetector.dll
+UserPlugins/reaper_frenkie_TransientDetector.dylib

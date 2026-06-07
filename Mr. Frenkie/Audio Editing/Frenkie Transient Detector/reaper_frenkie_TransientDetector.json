@@ -1,0 +1,9 @@
+{
+  "Low Cut": 448.0,
+  "High Cut": 20000.0,
+  "Gain": 6.7,
+  "Threshold": -45.2,
+  "Sensivity": 5.5,
+  "Retrig": 60.0,
+  "Reduce": 500
+}
