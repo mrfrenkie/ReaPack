@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Mr. Frenkie" commit="c83e5092aea66ef4c4ee668b84c725c03568d13d">
+<index version="1" name="Mr. Frenkie" commit="cf5f36df318c810f2636f9fae0b91513a9440680">
   <category name="Mr. Frenkie/Audio Editing">
     <reapack name="transient_detector.lua" type="script" desc="Frenkie Transient Detector">
       <metadata>
@@ -17,6 +17,23 @@
         <source file="Mr. Frenkie/Audio Editing/Frenkie Transient Detector/reaper_frenkie_TransientDetector.json">https://github.com/mrfrenkie/ReaPack/raw/436ba7c144d028eb99bb7604a1535c8d3e47f32b/Mr.%20Frenkie/Audio%20Editing/Frenkie%20Transient%20Detector/reaper_frenkie_TransientDetector.json</source>
         <source platform="win64" type="extension" file="reaper_frenkie_TransientDetector.dll">https://github.com/mrfrenkie/ReaPack/raw/436ba7c144d028eb99bb7604a1535c8d3e47f32b/UserPlugins/reaper_frenkie_TransientDetector.dll</source>
         <source platform="darwin-arm64" type="extension" file="reaper_frenkie_TransientDetector.dylib">https://github.com/mrfrenkie/ReaPack/raw/436ba7c144d028eb99bb7604a1535c8d3e47f32b/UserPlugins/reaper_frenkie_TransientDetector.dylib</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Mr. Frenkie/MIDI Editor">
+    <reapack name="frenkie_universal_third.lua" type="script" desc="Frenkie Universal Third Creator">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \u1048 ?\u1079 ?\u1074 ?\u1083 ?\u1077 ?\u1082 ?\u1072 ?\u1077 ?\u1090 ? \u1084 ?\u1080 ?\u1085 ?\u1086 ?\u1088 ?\u1085 ?\u1086 ?\u1077 ? \u1090 ?\u1088 ?\u1077 ?\u1079 ?\u1074 ?\u1091 ?\u1095 ?\u1080 ?\u1077 ? \u1073 ?\u1077 ?\u1079 ? Key Snap. \u1057 ?\u1086 ? \u1074 ?\u1082 ?\u1083 ?\u1102 ?\u1095 ?\u1105 ?\u1085 ?\u1085 ?\u1099 ?\u1084 ? Key Snap \u1080 ?\u1079 ?\u1074 ?\u1083 ?\u1077 ?\u1082 ?\u1072 ?\u1077 ?\u1090 ? \u1090 ?\u1088 ?\u1077 ?\u1079 ?\u1074 ?\u1091 ?\u1095 ?\u1080 ?\u1077 ? \u1074 ? \u1089 ?\u1086 ?\u1086 ?\u1090 ?\u1074 ?\u1077 ?\u1090 ?\u1089 ?\u1090 ?\u1074 ?\u1080 ?\u1080 ? \u1089 ?\u1086 ? \u1089 ?\u1090 ?\u1091 ?\u1087 ?\u1077 ?\u1085 ?\u1100 ?\u1102 ? \u1074 ?\u1099 ?\u1073 ?\u1088 ?\u1072 ?\u1085 ?\u1085 ?\u1086 ?\u1075 ?\u1086 ? \u1083 ?\u1072 ?\u1076 ?\u1072 ?.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0.0" author="Mr. Frenkie" time="2026-06-07T21:30:57Z">
+        <changelog><![CDATA[Извлекает минорное трезвучие без Key Snap. Со включённым Key Snap извлекает трезвучие в соответствии со ступенью выбранного лада.]]></changelog>
+        <source main="midi_editor" file="Mr. Frenkie/MIDI Editor/Frenkie Universal Third.lua">https://github.com/mrfrenkie/ReaPack/raw/cf5f36df318c810f2636f9fae0b91513a9440680/Mr.%20Frenkie/MIDI%20Editor/Frenkie%20Universal%20Third.lua</source>
       </version>
     </reapack>
   </category>
@@ -89,7 +106,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 Frenkie Universal Third Creator\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 Mr. Frenkie\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 Installation\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 Copy and paste this URL in Extensions > ReaPack > Import a repository:\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 \f1 https://github.com/mrfrenkie/ReaPack/raw/master/index.xml\par}
