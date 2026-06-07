@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Mr. Frenkie" commit="cf5f36df318c810f2636f9fae0b91513a9440680">
+<index version="1" name="Mr. Frenkie" commit="43736ef411ece02894361a4a473d65f7be5d117e">
   <category name="Mr. Frenkie/Audio Editing">
     <reapack name="transient_detector.lua" type="script" desc="Frenkie Transient Detector">
       <metadata>
@@ -21,6 +21,21 @@
     </reapack>
   </category>
   <category name="Mr. Frenkie/MIDI Editor">
+    <reapack name="frenkie_universal_seventh.lua" type="script" desc="Frenkie Universal 7th Creator">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \u1048 ?\u1079 ?\u1074 ?\u1083 ?\u1077 ?\u1082 ?\u1072 ?\u1077 ?\u1090 ? \u1084 ?\u1072 ?\u1078 ?\u1086 ?\u1088 ?\u1085 ?\u1086 ?\u1077 ? \u1090 ?\u1088 ?\u1077 ?\u1079 ?\u1074 ?\u1091 ?\u1095 ?\u1080 ?\u1077 ? \u1073 ?\u1077 ?\u1079 ? Key Snap. \u1057 ?\u1086 ? \u1074 ?\u1082 ?\u1083 ?\u1102 ?\u1095 ?\u1105 ?\u1085 ?\u1085 ?\u1099 ?\u1084 ? Key Snap \u1080 ?\u1079 ?\u1074 ?\u1083 ?\u1077 ?\u1082 ?\u1072 ?\u1077 ?\u1090 ? \u1089 ?\u1077 ?\u1087 ?\u1090 ?\u1072 ?\u1082 ?\u1082 ?\u1086 ?\u1088 ?\u1076 ? \u1074 ? \u1089 ?\u1086 ?\u1086 ?\u1090 ?\u1074 ?\u1077 ?\u1090 ?\u1089 ?\u1090 ?\u1074 ?\u1080 ?\u1080 ? \u1089 ?\u1086 ? \u1089 ?\u1090 ?\u1091 ?\u1087 ?\u1077 ?\u1085 ?\u1100 ?\u1102 ? \u1074 ?\u1099 ?\u1073 ?\u1088 ?\u1072 ?\u1085 ?\u1085 ?\u1086 ?\u1075 ?\u1086 ? \u1083 ?\u1072 ?\u1076 ?\u1072 ?. \u1056 ?\u1077 ?\u1082 ?\u1086 ?\u1084 ?\u1077 ?\u1085 ?\u1076 ?\u1091 ?\u1102 ? \u1074 ? \u1087 ?\u1072 ?\u1088 ?\u1077 ? \u1089 ? Universal Third Creator.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0.0" author="Mr. Frenkie" time="2026-06-07T22:20:24Z">
+        <changelog><![CDATA[Извлекает мажорное трезвучие без Key Snap. Со включённым Key Snap извлекает септаккорд в соответствии со ступенью выбранного лада. Рекомендую в паре с Universal Third Creator.]]></changelog>
+        <source main="midi_editor" file="Mr. Frenkie/MIDI Editor/Frenkie Universal Seventh.lua">https://github.com/mrfrenkie/ReaPack/raw/43736ef411ece02894361a4a473d65f7be5d117e/Mr.%20Frenkie/MIDI%20Editor/Frenkie%20Universal%20Seventh.lua</source>
+      </version>
+    </reapack>
     <reapack name="frenkie_universal_third.lua" type="script" desc="Frenkie Universal Third Creator">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
