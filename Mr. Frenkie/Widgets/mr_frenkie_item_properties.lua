@@ -1,26 +1,86 @@
 -- @description Frenkie Inspector Panel
--- @version 4.0b2
+-- @version 5.0b
 -- @author Mr. Frenkie
 -- @metapackage
--- @about
---  # Package
---  
---  Short package description.
 -- @changelog
---  + отказ от SWS и ReasCript
---  + Rate для x2 и /2
---  + Кнопка "Открыть инструмент"
---  + Стрелка выпадающего списка стретч режимов 
---  + Двойной клик для сброса везде
---  + Opt везде редактирует поля ввода
---  + сотые числа для Pitch и BPM
---  + Опция в настройках Reaper - фильтры всегда в начале потока
+--   Добавлено:
+--   - Контекст автоматизации для огибающих трека: редактирование прямо в виджете.
+--     Точки и razor-области перетаскиваются по значению, позиции и натяжению (одно
+--     действие Undo на перетаскивание), выбранные точки удаляются, razor-область
+--     перемещается вместе со своими точками по сетке (Shift — без привязки).
+--   - Список автоматизации на треке: точка на иконке трека открывает все огибающие
+--     трека, включая скрытые, с возможностью показать, спрятать или выбрать.
+--   - Режим трека: поле Last Touched Parameter — последний тронутый параметр FX этого
+--     трека, редактируется на месте (перетаскивание — значение, Shift — точнее,
+--     двойной клик — значение по умолчанию, Cmd/Ctrl+клик — показать огибающую).
+--   - Строка информации айтема: инфо-строка REAPER (край, фейд, движение, слип, rate)
+--     в формате времени проекта.
+--   - Настройки виджета (REAPER → Preferences): выбор, чем управляет бокс громкости —
+--     громкостью айтема или тейка.
+--   - Типы айтемов в хедере: audio, MIDI, ARA, video, click, LTC, subproject, empty,
+--     mixed — у каждого своя текстура.
+--
+--   Изменено:
+--   - Контекст определяется фокусом и выделением REAPER, а не положением мыши.
+--   - Хедер айтема показывает его трек кликабельным блоком: клик переходит на этот
+--     трек. У хедера трека остаётся только цветной язычок как маркер выделения.
+--   - Кнопка на имени трека всегда поднимает на уровень выше: из точек автоматизации
+--     или razor-области — сначала на огибающую, затем на трек.
+--   - JSFX: у Transpose & Monitor появился полноценный интерфейс (кварто-квинтовый
+--     круг, клавиатура, история аккордов) с обновлённой библиотекой аккордов;
+--     у Low/High Cut — живой спектр и график. Оба встраиваются в трек/микшер и
+--     пропускают клики.
+--   - Частота среза отображается как 120 / 1.5k / 12k — без «Hz».
+--
+--   Исправлено:
+--   - В режиме трека убран пустой провал после кнопки инструмента (остался от старой
+--     кнопки Track Notes).
+--   - Транспоуз MIDI-айтема записывает одно действие Undo на перетаскивание.
+--   - Переименованные копии FX фильтров и транспоуза по-прежнему находятся.
+--
+--   Примечание:
+--   - macOS: только Apple Silicon; Intel Mac не поддерживается.
+--
+--   Added:
+--   - Automation context for track envelopes: editing right in the widget. Points and
+--     razor areas can be dragged by value, position or tension (one undo point per
+--     drag), selected points deleted, and a razor area moved with its points on the
+--     grid (Shift for free).
+--   - Envelope list on the track: the dot on the track icon opens all of the track's
+--     automation, hidden ones included, to show, hide or pick.
+--   - Track mode: a Last Touched Parameter field — the last FX parameter touched on the
+--     track, editable in place (drag = value, Shift = fine, double-click = default,
+--     Cmd/Ctrl+click = show its envelope).
+--   - Item info line: REAPER's editing info (edge, fade, move, slip, rate) in the
+--     project's time format.
+--   - Widget settings (REAPER → Preferences): the volume box can control Item volume or
+--     Take volume.
+--   - Item kinds in the header: audio, MIDI, ARA, video, click, LTC, subproject, empty,
+--     mixed — each with its own texture.
+--
+--   Changed:
+--   - Context follows REAPER's focus and selection, not the mouse.
+--   - The item header shows its track as a clickable block; clicking it switches to that
+--     track. The track header keeps only the colored tab as its selection marker.
+--   - The button on the track name always goes one level up: from automation points or a
+--     razor edit — first to the envelope, then to the track.
+--   - JSFX: Transpose & Monitor has a full UI (circle of fifths, keyboard, chord
+--     history) with an updated chord library; Low/High Cut has a live spectrum and
+--     graph. Both embed into the track/mixer and pass clicks through.
+--   - Cutoff reads as 120 / 1.5k / 12k — no more "Hz".
+--
+--   Fixed:
+--   - Track mode: the empty gap after the instrument button is gone (left over from the
+--     old Track Notes button).
+--   - MIDI item transpose writes one undo point per drag.
+--   - Renamed copies of the filter / transpose FX are still found.
+--
+--   Note:
+--   - macOS: Apple Silicon only; Intel Macs are not supported.
 -- @provides
 --   [main] Frenkie Inspector Panel/Frenkie Item Properties.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/Frenkie Item Properties.lua
---   Frenkie Inspector Panel/ItemProperties/Core.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Core.lua
 --   Frenkie Inspector Panel/ItemProperties/Fader.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Fader.lua
 --   Frenkie Inspector Panel/ItemProperties/Item.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Item.lua
---   Frenkie Inspector Panel/ItemProperties/MIDI Transpose and Monitor.jsfx > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/MIDI Transpose and Monitor.jsfx
 --   Frenkie Inspector Panel/ItemProperties/Pitch.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Pitch.lua
 --   Frenkie Inspector Panel/ItemProperties/Take.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Take.lua
 --   Frenkie Inspector Panel/ItemProperties/Theme.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Theme.lua
@@ -29,32 +89,11 @@
 --   Frenkie Inspector Panel/ItemProperties/UI.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/UI.lua
 --   Frenkie Inspector Panel/ItemProperties/UIComponents.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/UIComponents.lua
 --   Frenkie Inspector Panel/ItemProperties/Utils.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/Utils.lua
+--   Frenkie Inspector Panel/ItemProperties/fonts/FIPIcons-LICENSE.txt > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/fonts/FIPIcons-LICENSE.txt
+--   Frenkie Inspector Panel/ItemProperties/fonts/FIPIcons.ttf > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/fonts/FIPIcons.ttf
 --   Frenkie Inspector Panel/ItemProperties/fonts/Glifs.ttf > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/fonts/Glifs.ttf
 --   Frenkie Inspector Panel/ItemProperties/fonts/Roboto-Regular.ttf > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/fonts/Roboto-Regular.ttf
---   Frenkie Inspector Panel/ItemProperties/icons/Icon Source/Loop.afdesign > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/Loop.afdesign
---   Frenkie Inspector Panel/ItemProperties/icons/Icon Source/Muted.afdesign > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/Muted.afdesign
---   Frenkie Inspector Panel/ItemProperties/icons/Icon Source/locked.afdesign > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/locked.afdesign
---   Frenkie Inspector Panel/ItemProperties/icons/Icon Source/reverse.afdesign > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/reverse.afdesign
---   Frenkie Inspector Panel/ItemProperties/icons/Instr-icon.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Instr-icon.png
---   Frenkie Inspector Panel/ItemProperties/icons/audio-item.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/audio-item.png
---   Frenkie Inspector Panel/ItemProperties/icons/default-icon.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/default-icon.png
---   Frenkie Inspector Panel/ItemProperties/icons/locked mixed.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/locked mixed.png
---   Frenkie Inspector Panel/ItemProperties/icons/locked.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/locked.png
---   Frenkie Inspector Panel/ItemProperties/icons/looped mixed.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/looped mixed.png
---   Frenkie Inspector Panel/ItemProperties/icons/looped.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/looped.png
---   Frenkie Inspector Panel/ItemProperties/icons/midi-item.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/midi-item.png
---   Frenkie Inspector Panel/ItemProperties/icons/multi-item.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/multi-item.png
---   Frenkie Inspector Panel/ItemProperties/icons/muted mixed.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/muted mixed.png
---   Frenkie Inspector Panel/ItemProperties/icons/muted.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/muted.png
---   Frenkie Inspector Panel/ItemProperties/icons/reversed mixed.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/reversed mixed.png
---   Frenkie Inspector Panel/ItemProperties/icons/reversed.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/reversed.png
---   Frenkie Inspector Panel/ItemProperties/icons/track-icon.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/track-icon.png
---   Frenkie Inspector Panel/ItemProperties/icons/unlocked.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/unlocked.png
---   Frenkie Inspector Panel/ItemProperties/icons/unlooped.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/unlooped.png
---   Frenkie Inspector Panel/ItemProperties/icons/unmuted.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/unmuted.png
---   Frenkie Inspector Panel/ItemProperties/icons/unreversed.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/unreversed.png
---   Frenkie Inspector Panel/ItemProperties/jsfx.lua > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/jsfx.lua
+--   Frenkie Inspector Panel/ItemProperties/icons/*.png > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/
+--   Frenkie Inspector Panel/ItemProperties/icons/Icon Source/*.afdesign > Mr. Frenkie/Widgets/Frenkie Inspector Panel/ItemProperties/icons/Icon Source/
 --   [win64 extension] ../../UserPlugins/reaper_frenkie_core.dll > reaper_frenkie_core.dll
 --   [darwin-arm64 extension] ../../UserPlugins/reaper_frenkie_core.dylib > reaper_frenkie_core.dylib
-
--- Generated by ReaPack Publisher.

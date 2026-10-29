@@ -1,12 +1,9 @@
 -- @noindex
-
--- @noindex
 ---@diagnostic disable: undefined-global, undefined-field
 local r = reaper
 local script_path_full = debug.getinfo(1, 'S').source:match('@(.*)')
 local script_dir = script_path_full:match('(.*[\\/])') or ''
 package.path = script_dir .. '?.lua;' .. script_dir .. '?/init.lua;' .. package.path
-local core = require('Core')
 local TimestrechWidget = require('TimestretchWidget')
 local UI = require('UIComponents')
 local Theme = require('Theme')
@@ -15,31 +12,21 @@ local Fader = require('Fader')
 local Utils = require('Utils')
 local Track = require('Track')
 local Item = require('Item')
-local JSFX = require('jsfx')
 
-local function ensure_jsfx_installed()
-    if not (r.APIExists and r.APIExists("FIP_EnsureJSFXFileStr")) then return end
-    r.FIP_EnsureJSFXFileStr("MIDI Transpose and Monitor.jsfx", JSFX.MIDI_TRANSPOSE_UTILITY_JSFX, 0)
-    r.FIP_EnsureJSFXFileStr("Low Cut 24 dB oct.jsfx", JSFX.LOW_CUT_24DB_JSFX, 0)
-    r.FIP_EnsureJSFXFileStr("High Cut 24 dB oct.jsfx", JSFX.HIGH_CUT_24DB_JSFX, 0)
-    if r.APIExists("FIP_EnsureJSFXPresetStr") then
-        r.FIP_EnsureJSFXPresetStr("js-Mr_ Frenkie_Low Cut 24 dB oct_jsfx.ini", JSFX.PRESET_LOW_CUT_24_EMBEDDED, 0)
-        r.FIP_EnsureJSFXPresetStr("js-Mr_ Frenkie_High Cut 24 dB oct_jsfx.ini", JSFX.PRESET_HIGH_CUT_24_EMBEDDED, 0)
+-- The widget draws with ReaImGui; everything it shows comes from the reaper_frenkie_core extension.
+local function CheckExtensions()
+    if not r.ImGui_CreateContext then
+        r.ShowMessageBox("ReaImGui extension is required for this script.", "Missing Extension", 0)
+        return false
     end
-    if r.APIExists("FIP_SetMidiTransposePresetStr") then
-        r.FIP_SetMidiTransposePresetStr(JSFX.MIDI_TRANSPOSE_UTILITY_PRESET_INI, 0)
+    if not (r.APIExists and r.APIExists('FIP_ContextUpdateStr')) then
+        r.ShowMessageBox("The Frenkie core extension (reaper_frenkie_core) is required for this script.", "Missing Extension", 0)
+        return false
     end
+    return true
 end
 
-ensure_jsfx_installed()
-
-local initial_state = core.GetState()
-if not initial_state.cached_items then
-    initial_state.cached_items = {}
-    core.SetState(initial_state)
-end
-
-if not core.CheckExtensions() then
+if not CheckExtensions() then
     return
 end
 
@@ -47,22 +34,7 @@ local ctx = nil
 local font = nil
 local font_italic = nil
 local font_bold = nil
-local audio_icon = nil
-local midi_icon = nil
-local track_icon = nil
-local instr_icon = nil
-local loop_icon_looped = nil
-local loop_icon_unlooped = nil
-local loop_icon_mixed = nil
-local reverse_icon_reversed = nil
-local reverse_icon_unreversed = nil
-local reverse_icon_mixed = nil
-local mute_icon_muted = nil
-local mute_icon_unmuted = nil
-local mute_icon_mixed = nil
-local lock_icon_locked = nil
-local lock_icon_unlocked = nil
-local lock_icon_mixed = nil
+local icon_font = nil
 local first_auto_resize = true
 local initial_item_width = 1100
 local bpm_value_edit = { active = false, text = '', want_focus = false }
@@ -72,6 +44,8 @@ local mt_value_edit = { active = false, text = '', want_focus = false }
 local track_items_pitch_value_edit = { active = false, text = '', want_focus = false }
 local hp_value_edit = { active = false, text = '', want_focus = false }
 local lp_value_edit = { active = false, text = '', want_focus = false }
+-- Name typed for an empty item (= first line of its notes) and the selection it belongs to.
+local empty_name_edit = { text = nil, sig = nil }
 local value_input_reset_grace_frames = 0
 local multi_item_pitch_session = { active = false, sig = '', display = 0 }
 local midi_item_pitch_session = { active = false, sig = '', display = 0 }
@@ -218,8 +192,9 @@ local function fip_try_fxsnap_slot_context_menu(ctx, slot_1_based, track)
     end
 end
 
+-- ReaImGui 0.10: CreateFont takes a font family name; font files need CreateFontFromFile.
 local function CreateFont(file_path)
-    return r.ImGui_CreateFont(file_path)
+    return r.ImGui_CreateFontFromFile(file_path)
 end
 
 local function PushFont(ctx, font, size)
@@ -233,33 +208,19 @@ local function PushFontCompat(ctx, font, size)
     end
 end
 
-local function LoadIcon(dir, name)
-    local png = dir .. name .. '.png'
-    local img = nil
-    local f = io.open(png, 'rb')
-    if f then
-        f:close()
-        img = r.ImGui_CreateImage(png)
-    end
-    if not img then
-        local d = dir .. 'default-icon.png'
-        local df = io.open(d, 'rb')
-        if df then
-            df:close()
-            img = r.ImGui_CreateImage(d)
-        end
-    end
-    return img
-end
-
 function EnsureImGuiContext()
     if not ctx then
         local script_path_full = debug.getinfo(1, 'S').source:match('@(.*)')
         local script_dir = script_path_full:match('(.*[\\/])') or ''
 
         ctx = r.ImGui_CreateContext('Frenkie Item Properties')
-        font = CreateFont(script_dir .. 'fonts/Roboto-Regular.ttf')
+        -- System font (with the OS fallback for any script in names and the ⌥⇧⌘ tooltip symbols).
+        -- Roboto from fonts/ would need CreateFontFromFile and has no fallback for missing characters.
+        font = r.ImGui_CreateFont('sans-serif')
         pcall(r.ImGui_Attach, ctx, font)
+        icon_font = CreateFont(script_dir .. 'fonts/FIPIcons.ttf')
+        pcall(r.ImGui_Attach, ctx, icon_font)
+        UI.SetIconFont(icon_font)
         UI.SetTooltipFont(font, 13)
         local italic_path = script_dir .. 'fonts/Roboto-Italic.ttf'
         local f = io.open(italic_path, 'rb')
@@ -278,41 +239,6 @@ function EnsureImGuiContext()
             font_bold = CreateFont(bold_path)
             pcall(r.ImGui_Attach, ctx, font_bold)
         end
-
-        local icon_path = script_dir .. 'icons/'
-        audio_icon = r.ImGui_CreateImage(icon_path .. 'audio-item.png')
-        midi_icon = r.ImGui_CreateImage(icon_path .. 'midi-item.png')
-        track_icon = r.ImGui_CreateImage(icon_path .. 'track-icon.png')
-        instr_icon = r.ImGui_CreateImage(icon_path .. 'Instr-icon.png')
-        loop_icon_looped = LoadIcon(icon_path, 'looped')
-        loop_icon_unlooped = LoadIcon(icon_path, 'unlooped')
-        loop_icon_mixed = LoadIcon(icon_path, 'looped mixed')
-        reverse_icon_reversed = LoadIcon(icon_path, 'reversed')
-        reverse_icon_unreversed = LoadIcon(icon_path, 'unreversed')
-        reverse_icon_mixed = LoadIcon(icon_path, 'reversed mixed')
-        mute_icon_muted = LoadIcon(icon_path, 'muted')
-        mute_icon_unmuted = LoadIcon(icon_path, 'unmuted')
-        mute_icon_mixed = LoadIcon(icon_path, 'muted mixed')
-        lock_icon_locked = LoadIcon(icon_path, 'locked')
-        lock_icon_unlocked = LoadIcon(icon_path, 'unlocked')
-        lock_icon_mixed = LoadIcon(icon_path, 'locked mixed')
-
-        if audio_icon then r.ImGui_Attach(ctx, audio_icon) end
-        if midi_icon then r.ImGui_Attach(ctx, midi_icon) end
-        if track_icon then r.ImGui_Attach(ctx, track_icon) end
-        if instr_icon then r.ImGui_Attach(ctx, instr_icon) end
-        if loop_icon_looped then r.ImGui_Attach(ctx, loop_icon_looped) end
-        if loop_icon_unlooped then r.ImGui_Attach(ctx, loop_icon_unlooped) end
-        if loop_icon_mixed then r.ImGui_Attach(ctx, loop_icon_mixed) end
-        if reverse_icon_reversed then r.ImGui_Attach(ctx, reverse_icon_reversed) end
-        if reverse_icon_unreversed then r.ImGui_Attach(ctx, reverse_icon_unreversed) end
-        if reverse_icon_mixed then r.ImGui_Attach(ctx, reverse_icon_mixed) end
-        if mute_icon_muted then r.ImGui_Attach(ctx, mute_icon_muted) end
-        if mute_icon_unmuted then r.ImGui_Attach(ctx, mute_icon_unmuted) end
-        if mute_icon_mixed then r.ImGui_Attach(ctx, mute_icon_mixed) end
-        if lock_icon_locked then r.ImGui_Attach(ctx, lock_icon_locked) end
-        if lock_icon_unlocked then r.ImGui_Attach(ctx, lock_icon_unlocked) end
-        if lock_icon_mixed then r.ImGui_Attach(ctx, lock_icon_mixed) end
     end
 end
 
@@ -328,6 +254,13 @@ local function IsItemSelection(props)
     return props.take_type == 'Audio' or props.take_type == 'MIDI' or props.take_type == 'Mult' or props.take_type == 'Empty'
 end
 
+-- Position / length info at the right end of the item row (REAPER's mouse editing help, see fip_item_info).
+local function DrawItemInfoLine(ctx)
+    if r.APIExists and r.APIExists('FIP_ItemInfoGetStateStr') then
+        UI.ItemInfoLine(ctx, r.FIP_ItemInfoGetStateStr('', 0))
+    end
+end
+
 local function IsTrackSelection(props)
     return props.take_type == 'Track'
 end
@@ -340,68 +273,12 @@ local function RoundUpPow2(n)
 end
 
 
-local function ApplyContextFromReaperCursor(state)
-    local window = r.FIP_GetMouseCursorContextWindowStr('', 0) or 'unknown'
-    if window ~= 'unknown' then
-        local it = r.FIP_GetMouseCursorContextItem('', 0)
-        if it and r.ValidatePtr(it, 'MediaItem*') then
-            state.prefer_track_context = false
-            state.force_track_context = false
-        elseif window == 'tcp' or window == 'mcp' then
-            state.prefer_track_context = true
-            state.force_track_context = true
-            local tr = r.FIP_GetMouseCursorContextTrack('', 0)
-            if tr and r.ValidatePtr(tr, 'MediaTrack*') then
-                state.hovered_track = tr
-            else
-                state.hovered_track = nil
-            end
-        else
-            state.force_track_context = false
-        end
-    end
-    local items_cnt = (r.APIExists and r.APIExists("FIP_CountSelectedItems"))
-        and math.floor(tonumber((r.FIP_CountSelectedItems("", 0))) or 0)
-        or r.CountSelectedMediaItems(0)
-
-    local items_sig = (r.APIExists and r.APIExists("FIP_GetSelectedItemsSignatureStr"))
-        and (r.FIP_GetSelectedItemsSignatureStr("", 0) or "")
-        or ""
-
-    local items_now = {}
-    if items_cnt == 1 then
-        local it = r.GetSelectedMediaItem(0, 0)
-        if it then items_now[1] = it end
-    end
-
-    local tracks_now = Track.GetSelectedTracks()
-    if not state.force_track_context then
-        if items_cnt > 0 then
-            state.prefer_track_context = false
-        elseif #tracks_now > 0 then
-            state.prefer_track_context = true
-        end
-    end
-    if state.force_track_context then
-        state.cached_props = { take_type = 'Track', name = 'Selected Track' }
-    elseif state.prefer_track_context and #tracks_now > 0 then
-        state.cached_props = { take_type = 'Track', name = 'Selected Track' }
-    elseif items_cnt > 0 then
-        state.cached_props = Item.GetAggregatedProps(items_now)
-    elseif #tracks_now > 0 then
-        state.cached_props = { take_type = 'Track', name = 'Selected Track' }
-    else
-        state.cached_props = {}
-    end
-    state.cached_items = items_now
-    state.cached_items_sig = items_sig
-    state.cached_items_count = items_cnt
-    state.cached_tracks = tracks_now
-end
+-- Frame-to-frame UI memory (the context itself lives in the extension, fip_context.cpp).
+local last_items_sig = nil   -- text inputs and pitch sessions reset when the item selection changes
+local last_item_props = nil  -- kept while a pitch drag runs, so the boxes do not jump
+local freeze_cache = { key = nil, cc = nil, stats = nil }
 
 local function Main()
-    local state = core.GetState()
-
     if not ctx or not r.ImGui_ValidatePtr(ctx, 'ImGui_Context*') then
         return
     end
@@ -412,11 +289,39 @@ local function Main()
     r.ImGui_SetNextWindowSize(ctx, initial_item_width or 1000, 600, r.ImGui_Cond_FirstUseEver())
     local flags = r.ImGui_WindowFlags_None()
     if first_auto_resize then flags = flags | r.ImGui_WindowFlags_AlwaysAutoResize() end
+
+    -- «Язычок» раздока (треугольник в углу окна, которым виджет вытягивают из дока)
+    -- ReaImGui рисует цветом ImGuiCol_Button прямо внутри Begin(). Убрать его нельзя
+    -- (нет доступа к флагам dock node), поэтому на время Begin() красим кнопочные
+    -- цвета в цвет фона окна — треугольник сливается с фоном.
+    local window_bg = Theme.getMainWindowTransportBackground()
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), window_bg)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), window_bg)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), window_bg)
+
     local visible, open = r.ImGui_Begin(ctx, 'Item Properties', true, flags)
+
+    r.ImGui_PopStyleColor(ctx, 3)
+
+    -- Край окна: фон взят из темы REAPER и сливается с ней, а штатная рамка ImGui-окна
+    -- (WindowBorderSize/Col_Border) у ReaImGui не читается. Поэтому рисуем линию сами —
+    -- 2 px по периметру окна, со скруглением фона. Цвет — Theme.getMainWindowBorder().
+    do
+        local dl = r.ImGui_GetWindowDrawList(ctx)
+        local wx, wy = r.ImGui_GetWindowPos(ctx)
+        local ww, wh = r.ImGui_GetWindowSize(ctx)
+        local x1, y1 = math.floor(wx) + 1, math.floor(wy) + 1
+        local x2, y2 = math.floor(wx + ww) - 1, math.floor(wy + wh) - 1
+        r.ImGui_DrawList_AddRect(dl, x1, y1, x2, y2,
+            Theme.getMainWindowBorder(), 7, r.ImGui_DrawFlags_None(), 2)
+    end
+
     if r.ImGui_IsWindowAppearing(ctx) then first_auto_resize = false end
 
-    local ms_left = tonumber(r.FIP_GetMouseButtonsStateVal(1.0, 0) or 0) or 0
-    local ms_right = tonumber(r.FIP_GetMouseButtonsStateVal(2.0, 0) or 0) or 0
+    if visible then
+        Track.PollLastTouchedParam()
+    end
+
     local hover_flags = r.ImGui_HoveredFlags_ChildWindows()
                       | r.ImGui_HoveredFlags_AllowWhenBlockedByActiveItem()
                       | r.ImGui_HoveredFlags_AllowWhenBlockedByPopup()
@@ -436,187 +341,52 @@ local function Main()
         and window_hovered
         and not suppress_rclick_item_track_for_fxsnap_row
 
-    if right_clicked_in_widget then
-        local showing_track_before
-        if state.manual_context_override then
-            showing_track_before = state.manual_context_prefer_track and true or false
-        else
-            showing_track_before = state.prefer_track_context and true or false
-        end
-        state.manual_context_override = true
-        state.manual_context_prefer_track = not showing_track_before
-        state.prefer_track_context = state.manual_context_prefer_track
-        state.force_track_context = state.manual_context_prefer_track
-        if not state.manual_context_prefer_track then
-            state.hovered_track = nil
-        end
-        local items_cnt = (r.APIExists and r.APIExists("FIP_CountSelectedItems"))
-            and math.floor(tonumber((r.FIP_CountSelectedItems("", 0))) or 0)
-            or r.CountSelectedMediaItems(0)
-
-        local items_sig = (r.APIExists and r.APIExists("FIP_GetSelectedItemsSignatureStr"))
-            and (r.FIP_GetSelectedItemsSignatureStr("", 0) or "")
-            or ""
-
-        local items_now = {}
-        if items_cnt == 1 then
-            local it = r.GetSelectedMediaItem(0, 0)
-            if it then items_now[1] = it end
-        end
-
-        local tracks_now = Track.GetSelectedTracks()
-        if state.manual_context_prefer_track and #tracks_now > 0 then
-            state.cached_props = { take_type = 'Track', name = 'Selected Track' }
-            state.cached_items = {}
-            state.cached_items_sig = items_sig
-            state.cached_items_count = items_cnt
-            state.cached_tracks = tracks_now
-        elseif not state.manual_context_prefer_track and items_cnt > 0 then
-            state.cached_props = Item.GetAggregatedProps(items_now)
-            state.cached_items = items_now
-            state.cached_items_sig = items_sig
-            state.cached_items_count = items_cnt
-            state.cached_tracks = tracks_now
-        elseif #tracks_now > 0 then
-            state.cached_props = { take_type = 'Track', name = 'Selected Track' }
-            state.cached_items = items_now
-            state.cached_items_sig = items_sig
-            state.cached_items_count = items_cnt
-            state.cached_tracks = tracks_now
-        else
-            state.cached_props = {}
-            state.cached_items = items_now
-            state.cached_items_sig = items_sig
-            state.cached_items_count = items_cnt
-            state.cached_tracks = tracks_now
-        end
-        core.SetState(state)
-    end
-
-    if (ms_left == 1 or ms_right == 2) and not state.last_mouse_state then
-        state.last_mouse_button = (ms_right == 2) and 2 or 1
-        if not window_hovered then
-            state.manual_context_override = false
-            ApplyContextFromReaperCursor(state)
-        end
-        state.last_mouse_state = true
-        core.SetState(state)
-    elseif ms_left == 0 and ms_right == 0 and state.last_mouse_state then
-        state.last_mouse_button = 0
-        state.last_mouse_state = false
-        core.SetState(state)
-    end
+    -- Which panel to show: the extension mirrors REAPER's focus and selections; the right-click toggle moves the focus.
+    local context = Utils.ParseKeyValues(r.FIP_ContextUpdateStr('', right_clicked_in_widget and 2 or 0))
 
     if visible then
-        local state = core.GetState()
         local fip_fxsnap_strip_committed = false
 
-        local items_count = (r.APIExists and r.APIExists("FIP_CountSelectedItems"))
-            and math.floor(tonumber((r.FIP_CountSelectedItems("", 0))) or 0)
-            or r.CountSelectedMediaItems(0)
-
+        local items_count = tonumber(context.items) or 0
         local items_sig = (r.APIExists and r.APIExists("FIP_GetSelectedItemsSignatureStr"))
             and (r.FIP_GetSelectedItemsSignatureStr("", 0) or "")
             or ""
-
         local items = {}
         if items_count == 1 then
             local it = r.GetSelectedMediaItem(0, 0)
             if it then items[1] = it end
         end
-
-        local selected_tracks = Track.GetSelectedTracks()
-        local tracks = selected_tracks
-        if not state.manual_context_override and state.force_track_context and state.hovered_track and r.ValidatePtr(state.hovered_track, 'MediaTrack*') then
-            tracks = { state.hovered_track }
+        local tracks = {}
+        for i = 0, (tonumber(context.tracks) or 0) - 1 do
+            local tr = r.FIP_ContextGetTrack('', i)
+            if tr then tracks[#tracks + 1] = tr end
         end
-
-        local old_items_sig = state.cached_items_sig or ""
-        local old_tracks = state.cached_tracks or {}
-
-        local items_changed = (old_items_sig ~= items_sig)
-        local tracks_changed = not Utils.shallow_equal(old_tracks, tracks)
-        local should_update_cache = items_changed or tracks_changed
-
-        if not state.manual_context_override then
-            if not state.force_track_context then
-                if items_count > 0 then
-                    state.prefer_track_context = false
-                elseif #tracks > 0 then
-                    state.prefer_track_context = true
-                end
-            end
-        end
-
-        if should_update_cache then
-            if state.manual_context_override then
-                state.cached_items = items
-                state.cached_items_sig = items_sig
-                state.cached_items_count = items_count
-                state.cached_tracks = tracks
-                if state.manual_context_prefer_track and #tracks > 0 then
-                    state.cached_props = { take_type = 'Track', name = 'Selected Track' }
-                elseif not state.manual_context_prefer_track and items_count > 0 then
-                    state.cached_props = Item.GetAggregatedProps(items)
-                elseif state.manual_context_prefer_track and #tracks > 0 then
-                    state.cached_props = { take_type = 'Track', name = 'Selected Track' }
-                else
-                    state.cached_props = {}
-                end
-            else
-                if state.prefer_track_context and #tracks > 0 then
-                    state.cached_props = { take_type = 'Track', name = 'Selected Track' }
-                elseif items_count > 0 then
-                    state.cached_props = Item.GetAggregatedProps(items)
-                elseif #tracks > 0 then
-                    state.cached_props = { take_type = 'Track', name = 'Selected Track' }
-                else
-                    state.cached_props = {}
-                end
-                state.cached_items = items
-                state.cached_items_sig = items_sig
-                state.cached_items_count = items_count
-                state.cached_tracks = tracks
-            end
-        end
+        local items_changed = items_sig ~= last_items_sig
+        last_items_sig = items_sig
 
         local proj_cc = r.GetProjectStateChangeCount(0)
         local any_pitch_drag_active = UI.IsAnyPitchDragActive and UI.IsAnyPitchDragActive() or false
         local freeze_sel_key = GetTrackSelectionKey(tracks)
-        if (state._freeze_sel_key ~= freeze_sel_key) or (state._freeze_proj_cc ~= proj_cc) or (state.freeze_stats == nil) then
-            state.freeze_stats = Track.GetFreezeStats(tracks)
-            state._freeze_sel_key = freeze_sel_key
-            state._freeze_proj_cc = proj_cc
-            core.SetState(state)
+        if freeze_cache.key ~= freeze_sel_key or freeze_cache.cc ~= proj_cc or freeze_cache.stats == nil then
+            freeze_cache.stats = Track.GetFreezeStats(tracks)
+            freeze_cache.key, freeze_cache.cc = freeze_sel_key, proj_cc
         end
-        if items_count > 0 and not items_changed and not state.prefer_track_context and not any_pitch_drag_active then
-            if state._items_proj_cc ~= proj_cc then
-                state.cached_props = Item.GetAggregatedProps(items)
-                state._items_proj_cc = proj_cc
-                state.cache_time = r.time_precise()
-                core.SetState(state)
+        local freeze_stats = freeze_cache.stats
 
-            end
-        end
-        if items_count > 0 and not state.prefer_track_context and not any_pitch_drag_active then
-            local now = r.time_precise()
-            local interval = state.update_interval or (1/30)
-            if (now - (state.last_update_time or 0)) >= interval then
-                state.cached_props = Item.GetAggregatedProps(items)
-                state.last_update_time = now
-                state.cache_time = now
-                core.SetState(state)
-
-            end
+        local props = nil
+        if context.ctx == 'track' then
+            props = { take_type = 'Track', name = 'Selected Track' }
+        elseif context.ctx == 'item' then
+            props = (any_pitch_drag_active and last_item_props) or Item.GetAggregatedProps()
+            last_item_props = props
         end
 
         local any_value_input_active =
             pitch_value_edit.active or mt_value_edit.active or track_items_pitch_value_edit.active
             or hp_value_edit.active or lp_value_edit.active or rate_value_edit.active or bpm_value_edit.active
 
-        if should_update_cache then
-            if items_changed and not any_value_input_active and not any_pitch_drag_active and value_input_reset_grace_frames <= 0 then
-                Fader.ResetAccumulatedValues()
+        if items_changed then
+            if not any_value_input_active and not any_pitch_drag_active and value_input_reset_grace_frames <= 0 then
                 pitch_value_edit.active = false
                 pitch_value_edit.want_focus = false
                 mt_value_edit.active = false
@@ -640,44 +410,79 @@ local function Main()
             if value_input_reset_grace_frames > 0 then
                 value_input_reset_grace_frames = value_input_reset_grace_frames - 1
             end
-            state.cache_time = r.time_precise()
-            core.SetState(state)
         end
 
-        items = state.cached_items or {}
-        local props = state.cached_props
-        local item_count = state.cached_items_count or #items
-
+        local item_count = items_count
         if item_count > 1000 then
             props = { take_type = 'Warning', name = string.format('Too many items (%d). Performance may be affected.', item_count) }
         end
 
-        core.CleanupOriginalProps()
-        core.SetState(state)
+        -- Automation context: the extension draws its panel (fip_envelope_panel.cpp). Its crumb in the lane context
+        -- selects the owner track and shows the track panel; its tooltip goes to the styled tooltip. pcall: if this
+        -- REAPER / ReaImGui cannot pass the context to an extension, the panel is missing but the widget keeps running.
+        local env = {}
+        if context.ctx == 'envelope' and r.APIExists('FIP_EnvelopePanel') then
+            local ok, res = pcall(r.FIP_EnvelopePanel, ctx, UI.GetIconFont(), 0)
+            env = Utils.ParseKeyValues(ok and res or '')
+            UI.SetPendingTooltipText(env.tooltip)
+            if env.track == '1' then r.FIP_ContextShowTrack('', 1) end
+        end
 
-        if not props and item_count == 0 and #tracks == 0 then
-            pitch_module.ClearState()
+        if env.drawn == '1' then
+            -- the automation context panel is drawn
+        elseif not props and item_count == 0 and #tracks == 0 then
             r.ImGui_Text(ctx, 'No items or tracks selected')
         elseif props then
             props.sel_item_count = item_count
             local color, _, bar_rr, bar_gg, bar_bb, bar_fg = UI.GetBarColorAndUseBlack(items, tracks, props)
+            local bar_color = color
+            local G = UI.GLYPH
+
+            -- Item mode header data from the extension: item kind, whether the row has controls, crumb track.
+            local item_header = nil
+            if props.take_type ~= 'Track' then
+                if r.APIExists and r.APIExists('FIP_ItemHeaderGetStateStr') then
+                    item_header = Utils.ParseKeyValues(r.FIP_ItemHeaderGetStateStr('', 0))
+                    item_header.editable = item_header.editable == '1'
+                    item_header.tracks = tonumber(item_header.tracks) or 0
+                    item_header.track_color = tonumber(item_header.track_color) or 0
+                else
+                    local tt = props.take_type
+                    local kind = (tt == 'MIDI' and 'midi') or (tt == 'Empty' and 'empty') or (tt == 'Mult' and 'mixed') or 'audio'
+                    item_header = { kind = kind, editable = kind ~= 'empty', tracks = 0, track_color = 0 }
+                end
+            end
+
+            -- Crumb click: select the items' track and switch the inspector to track mode.
+            local function show_items_track()
+                r.FIP_ContextShowTrack('', 0)
+            end
 
             r.ImGui_BeginGroup(ctx)
 
-            UI.IconDisplay(ctx, props.take_type == 'MIDI' and midi_icon or 
-                              props.take_type == 'Audio' and audio_icon or 
-                              props.take_type == 'Track' and track_icon or nil)
-            
-
-
-            local bar_color = color
-            UI.PushBarForegroundText(ctx, bar_fg)
-
             local changed, new_name
             if props.take_type == 'Track' then
+                -- Track: fader icon (dot = the track has automation, click = envelope list), color spine with
+                -- the number, neutral name field.
+                local automation = (r.APIExists and r.APIExists('FIP_TrackAutomationGetStateStr'))
+                    and Utils.ParseKeyValues(r.FIP_TrackAutomationGetStateStr('', 0)) or nil
+                local icon_clicked, icon_hovered = UI.HeaderIconSlot(ctx, G.track, automation and {
+                    clickable = true, badge = UI.AutomationBadge(automation),
+                })
+                local icon_x = r.ImGui_GetItemRectMin(ctx)
+                local _, icon_y2 = r.ImGui_GetItemRectMax(ctx)
+                local spine_text = tostring(#tracks) .. '×'
+                if #tracks == 1 and r.ValidatePtr(tracks[1], 'MediaTrack*') then
+                    spine_text = tostring(math.floor(r.GetMediaTrackInfo_Value(tracks[1], 'IP_TRACKNUMBER')))
+                end
+                -- Number tab + name field are one block: the field starts under the tab, which is drawn on
+                -- top afterwards and covers the field's left rounding.
+                local tab_x, tab_y = r.ImGui_GetCursorScreenPos(ctx)
+                r.ImGui_SetCursorScreenPos(ctx, tab_x + UI.HEADER_SPINE_W - UI.HEADER_TAB_OVERLAP, tab_y)
+                UI.PushBarForegroundText(ctx, Theme.get('text_white_soft'))
                 if #tracks > 1 then
                     local hint_text = 'Multiple Tracks (' .. #tracks .. '):'
-                    changed, new_name = UI.MultiItemInput(ctx, '##MultipleTracks', hint_text, '', -1, bar_color)
+                    changed, new_name = UI.MultiItemInput(ctx, '##MultipleTracks', hint_text, '', -1, Theme.get('gray_42'), UI.HEADER_JOINED_PAD_X)
                     if changed and new_name ~= '' then
                         for _, tr in ipairs(tracks) do
                             if tr and r.ValidatePtr(tr, 'MediaTrack*') then
@@ -689,7 +494,7 @@ local function Main()
                 elseif #tracks == 1 and r.ValidatePtr(tracks[1], 'MediaTrack*') then
                     local tname = Track.GetTrackName(tracks[1])
                     local current_name = (props.name and props.name ~= 'Selected Track') and props.name or (tname or '')
-                    changed, new_name = UI.StyledInput(ctx, '##TrackName', current_name, -1, bar_color)
+                    changed, new_name = UI.StyledInput(ctx, '##TrackName', current_name, -1, Theme.get('gray_42'), UI.HEADER_JOINED_PAD_X)
                     if changed and new_name ~= current_name then
                         Track.SetTrackName(tracks[1], new_name)
                         props.name = new_name
@@ -697,15 +502,62 @@ local function Main()
                 else
                     r.ImGui_Text(ctx, 'No tracks selected')
                 end
+                UI.PopBarForegroundText(ctx)
+                UI.DrawHeaderTab(ctx, tab_x, tab_y, spine_text, bar_color, bar_fg)
+                if automation then
+                    UI.TrackAutomationPopup(ctx, { x = icon_x, y = icon_y2 + 2, hovered = icon_hovered,
+                        clicked = icon_clicked, has_envs = (tonumber(automation.envs) or 0) > 0 })
+                end
             else
+                -- Item: kind icon, the item's track (spine + crumb), colored name bar with the kind texture.
+                UI.HeaderIconSlot(ctx, G[item_header.kind] or G.audio)
+                if item_header.tracks == 1 then
+                    local tr_r, tr_g, tr_b = 64, 64, 64
+                    if item_header.track_color ~= 0 then
+                        tr_r, tr_g, tr_b = r.ColorFromNative(item_header.track_color)
+                    end
+                    local tr_fg = UI.BarForegroundPick(tr_r, tr_g, tr_b)
+                    if UI.HeaderTrackBlock(ctx, item_header.track_num or '', Theme.rgba(tr_r, tr_g, tr_b, 255), tr_fg,
+                        item_header.track_name) then
+                        show_items_track()
+                    end
+                elseif item_header.tracks > 1 then
+                    if UI.HeaderTrackBlock(ctx, tostring(item_header.tracks) .. '×', Theme.get('gray_64'),
+                        Theme.get('text_white_soft'), item_header.tracks .. ' tracks') then
+                        show_items_track()
+                    end
+                end
+                UI.PushBarForegroundText(ctx, bar_fg)
+                local bar_text = props.name or ''
                 if props.take_type == 'Empty' then
-                    UI.PureColorBar(ctx, nil, bar_color)
+                    -- An item without takes is named by the first line of its notes (what the arrange shows).
+                    -- The name is written once, when the field is left: written per key, a cleared field would
+                    -- make the next notes line the first one, and the next key would overwrite it.
+                    local notes = item_header.notes or ''
+                    local value = empty_name_edit.text or notes
+                    local hint = item_count > 1 and ('Multiple Items (' .. item_count .. ')') or 'Empty item'
+                    local edited, typed, left = UI.MultiItemInput(ctx, '##EmptyItemName', hint, value, -1, bar_color)
+                    if edited then
+                        empty_name_edit.sig = empty_name_edit.sig or items_sig
+                        empty_name_edit.text = typed
+                    end
+                    if left then
+                        local name = empty_name_edit.text
+                        if name and name ~= notes and empty_name_edit.sig == items_sig
+                            and r.APIExists and r.APIExists('FIP_SetSelectedItemsName') then
+                            Utils.with_undo('Rename empty item', function() r.FIP_SetSelectedItemsName(name, 0) end)
+                        end
+                        empty_name_edit.text, empty_name_edit.sig = nil, nil
+                    end
+                    bar_text = value ~= '' and value or hint
                 elseif item_count > 1 then
                     local hint_text = 'Multiple Items (' .. item_count .. '):'
                     if props.name and not props.name:match('^Multiple Items') then
                         hint_text = 'Multiple Items (' .. item_count .. '): ' .. props.name
                     end
+                    bar_text = hint_text
                     changed, new_name = UI.MultiItemInput(ctx, '##MultipleItems', hint_text, '', -1, bar_color)
+                    if new_name and new_name ~= '' then bar_text = new_name end -- the texture follows what is typed
                     if changed and new_name ~= '' then
                         if r.APIExists and r.APIExists("FIP_SetSelectedItemsName") then
                             r.FIP_SetSelectedItemsName(new_name, 0)
@@ -716,6 +568,7 @@ local function Main()
                     end
                 else
                     changed, new_name = UI.StyledInput(ctx, '##ObjectName', props.name or '', -1, bar_color)
+                    bar_text = new_name or bar_text
                     if changed and new_name ~= (props.name or '') then
                         if r.APIExists and r.APIExists("FIP_SetSelectedItemsName") then
                             r.FIP_SetSelectedItemsName(new_name, 0)
@@ -725,9 +578,9 @@ local function Main()
                         props.name = new_name
                     end
                 end
+                UI.PopBarForegroundText(ctx)
+                UI.DrawItemTexture(ctx, item_header.kind, bar_text, (bar_fg & ~0xFF) | 0x50)
             end
-
-            UI.PopBarForegroundText(ctx)
 
             r.ImGui_EndGroup(ctx)
 
@@ -739,11 +592,31 @@ local function Main()
                 end
                 local has_track_instrument = single_track and Track.HasInstrument(single_track) or false
                 local is_track_instrument_open = has_track_instrument and Track.IsInstrumentUIOpen(single_track) or false
-                UI.RenderTrackInstrumentButton(ctx, instr_icon, single_track, has_track_instrument,
+                -- Instrument under the header icon: the same place as 'i' in item mode.
+                UI.RenderTrackInstrumentButton(ctx, single_track, has_track_instrument,
                     is_track_instrument_open, function()
                     Track.OpenInstrumentUI(single_track)
                 end)
+                -- No second slot here (REAPER has no track notes): the row follows the instrument button directly.
                 UI.Separator(ctx)
+                if single_track and #tracks == 1 then
+                    local ltp = Track.GetLastTouchedParamInfo(single_track)
+                    UI.RenderLastTouchedParamBox(ctx, ltp, font,
+                        function(new_val)
+                            if not ltp then return end
+                            Track.BeginLastTouchedParamEdit()
+                            Track.SetLastTouchedParamValue(single_track, ltp.fxidx, ltp.parm, new_val)
+                        end,
+                        function()
+                            Track.EndLastTouchedParamEdit()
+                        end,
+                        function()
+                            if ltp then
+                                Track.ShowLastTouchedParamEnvelope(single_track, ltp.fxidx, ltp.parm)
+                            end
+                        end)
+                    UI.Separator(ctx)
+                end
                 if single_track and #tracks == 1 and r.APIExists and r.APIExists('FIP_TrackFXSnap_GetSlotCountVal') then
                     local snap_tt_api = (r.APIExists and r.APIExists('FIP_TrackFXSnap_GetSlotFxTooltipStr')) or false
                     local track_guid_tt = (snap_tt_api and single_track and r.GetTrackGUID(single_track)) or nil
@@ -826,27 +699,6 @@ local function Main()
                     r.ImGui_PopID(ctx)
                     UI.Separator(ctx)
                 end
-                local has_track_note = false
-                if single_track then
-                    local note_text = Track.GetTrackNotes(single_track)
-                    if note_text and note_text ~= '' then
-                        has_track_note = true
-                    end
-                end
-                if has_track_note then
-                    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), Theme.get('black'))
-                    UI.ColoredButton(ctx, 'N', 20, Theme.get('beige_base'), Theme.get('beige_hover'), Theme.get('beige_active'), function()
-                        r.Main_OnCommand(43704, 0)
-                    end)
-                    r.ImGui_PopStyleColor(ctx, 1)
-                else
-                    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), Theme.get('text_gray'))
-                    UI.ColoredButton(ctx, 'N', 20, Theme.get('gray_42'), Theme.get('gray_58'), Theme.get('gray_74'), function()
-                        r.Main_OnCommand(43704, 0)
-                    end)
-                    r.ImGui_PopStyleColor(ctx, 1)
-                end
-                UI.Separator(ctx)
                 local current_val = 0
                 local has_mt_fx = false
                 if single_track then
@@ -917,7 +769,7 @@ local function Main()
                                       | r.ImGui_InputTextFlags_AutoSelectAll()
                     local mt_submitted, new_text = r.ImGui_InputText(ctx, '##MidiTransposeValue', mt_value_edit.text, input_flags)
                     mt_value_edit.text = new_text
-                    local mt_d = Utils.ClearCursorContextOnDeactivation(ctx)
+                    local mt_d = Utils.ReturnFocusOnDeactivation(ctx)
                     r.ImGui_PopStyleVar(ctx, 2)
                     r.ImGui_PopStyleColor(ctx, 2)
                     UI.QueueStyledTooltipDelayed(ctx, 'fip_mt_input', UI.GetItemPitchTooltipLines(false), 1.0)
@@ -984,11 +836,11 @@ local function Main()
                         local bv = hue2rgb(h - 0.333333)
                         return Theme.rgba(rv * 255, gv * 255, bv * 255, 255)
                     end
-                    -- Display in box: "20k", "1k", "999 Hz"
+                    -- Display in box: "20k", "1.5k", "999" (no "Hz": the k values have no unit either)
                     local function format_freq_display(f)
                         if f >= 10000 then return string.format("%.0fk", f / 1000) end
                         if f >= 1000 then return string.format("%.1fk", f / 1000) end
-                        return string.format("%.0f Hz", f)
+                        return string.format("%.0f", f)
                     end
                     local function hp_display_fn(norm) return format_freq_display(Track.NormToFreq(norm)) end
                     local function lp_display_fn(norm) return format_freq_display(Track.NormToFreq(norm)) end
@@ -1046,7 +898,7 @@ local function Main()
                                           | r.ImGui_InputTextFlags_AutoSelectAll()
                         local hp_submitted, new_text = r.ImGui_InputText(ctx, '##HPFreqInput', hp_value_edit.text, input_flags)
                         hp_value_edit.text = new_text
-                        local hp_d = Utils.ClearCursorContextOnDeactivation(ctx)
+                        local hp_d = Utils.ReturnFocusOnDeactivation(ctx)
                         r.ImGui_PopStyleVar(ctx, 2)
                         r.ImGui_PopStyleColor(ctx, 2)
                         UI.QueueStyledTooltipDelayed(ctx, 'fip_hp_freq', UI.GetFilterFreqTooltipLines('HP'), 1.0)
@@ -1122,7 +974,7 @@ local function Main()
                                           | r.ImGui_InputTextFlags_AutoSelectAll()
                         local lp_submitted, new_text = r.ImGui_InputText(ctx, '##LPFreqInput', lp_value_edit.text, input_flags)
                         lp_value_edit.text = new_text
-                        local lp_d = Utils.ClearCursorContextOnDeactivation(ctx)
+                        local lp_d = Utils.ReturnFocusOnDeactivation(ctx)
                         r.ImGui_PopStyleVar(ctx, 2)
                         r.ImGui_PopStyleColor(ctx, 2)
                         UI.QueueStyledTooltipDelayed(ctx, 'fip_lp_freq', UI.GetFilterFreqTooltipLines('LP'), 1.0)
@@ -1201,7 +1053,7 @@ local function Main()
                                       | r.ImGui_InputTextFlags_AutoSelectAll()
                     local it_submitted, new_text = r.ImGui_InputText(ctx, '##TrackItemsPitchValue', track_items_pitch_value_edit.text, input_flags)
                     track_items_pitch_value_edit.text = new_text
-                    local it_d = Utils.ClearCursorContextOnDeactivation(ctx)
+                    local it_d = Utils.ReturnFocusOnDeactivation(ctx)
                     r.ImGui_PopStyleVar(ctx, 2)
                     r.ImGui_PopStyleColor(ctx, 2)
                     if has_track_items and track_item_count > 0 then
@@ -1235,7 +1087,7 @@ local function Main()
                     pitch_module.FinalizePitchChange()
                 end
                 UI.Separator(ctx)
-                local fs = state.freeze_stats or { total = 0, has = false, track_count = #tracks, mixed = false, all_frozen = false }
+                local fs = freeze_stats or { total = 0, has = false, track_count = #tracks, mixed = false, all_frozen = false }
                 local base, hover, active, push_black = UI.GetFreezeAccentColors(fs)
                 local label = 'Unfreeze'
                 local width = 80
@@ -1295,16 +1147,18 @@ local function Main()
             if IsItemSelection(props) then
                 r.ImGui_BeginGroup(ctx)
                 UI.ResetAggHoverRegion()
-                UI.RenderInfoButton(ctx, 40009)
-                UI.Separator(ctx)
+                UI.RenderInfoButton(ctx, 40009, UI.HEADER_SLOT_W)
+                r.ImGui_SameLine(ctx, 0, UI.HEADER_SLOT_GAP)
                 r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), Theme.get('black'))
-                UI.ColoredButton(ctx, 'N', 20, Theme.get('beige_base'), Theme.get('beige_hover'), Theme.get('beige_active'), function()
+                UI.ColoredButton(ctx, 'N', UI.HEADER_SPINE_W, Theme.get('beige_base'), Theme.get('beige_hover'), Theme.get('beige_active'), function()
                     r.Main_OnCommand(40850, 0)
                 end)
                 UI.QueueStyledTooltipDelayed(ctx, 'fip_item_notes', UI.GetItemNotesButtonTooltipLines(), 1.0)
                 r.ImGui_PopStyleColor(ctx, 1)
                 UI.Separator(ctx)
-                if props.take_type == 'Empty' then
+                if not item_header.editable then
+                    -- Video, video processor, click, timecode, subproject and empty items: no controls yet.
+                    DrawItemInfoLine(ctx)
                     r.ImGui_EndGroup(ctx)
                 else
                 local base_red = Theme.get('red_base')
@@ -1331,8 +1185,7 @@ local function Main()
                     btn_hover = hover_red
                     btn_active = active_red
                 end
-                if push_black then r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), Theme.get('black')) end
-                UI.ColoredButton(ctx, '↺', 24, btn_base, btn_hover, btn_active, function()
+                UI.ColoredButton(ctx, '##fip_reset_item', 24, btn_base, btn_hover, btn_active, function()
                     local cmd1 = r.NamedCommandLookup('_SWS_RESETRATE')
                     local cmd2 = r.NamedCommandLookup('_XENAKIOS_RESETITEMLENMEDOFFS')
                     local cmd3 = r.NamedCommandLookup('_XENAKIOS_RESETITEMPITCHANDRATE')
@@ -1340,7 +1193,7 @@ local function Main()
                     if cmd2 ~= 0 then r.Main_OnCommand(cmd2, 0) end
                     if cmd3 ~= 0 then r.Main_OnCommand(cmd3, 0) end
                 end)
-                if push_black then r.ImGui_PopStyleColor(ctx, 1) end
+                UI.DrawGlyphInLastItem(ctx, UI.GLYPH.reset, 14, push_black and Theme.get('black') or Theme.get('text_white_soft'))
                 UI.Separator(ctx)
                 local is_rate_modified = (props.playback_rate or 1.0) ~= 1.0
                 local function reset_rate_action()
@@ -1355,12 +1208,9 @@ local function Main()
                             r.ShowConsoleMsg("ERROR: FIP_SetSelectedItemsPlaybackRate not available\n")
                         end
                     end)
-                    local state2 = core.GetState()
-                    state2.cached_props = Item.GetAggregatedProps(items)
-                    core.SetState(state2)
                 end
                 if not rate_value_edit.active then
-                    local rate_changed, rate_value, rate_deactivated, _, rate_dbl_clicked = UI.RateControl(ctx, 'Rate:', props.playback_rate or 1.0, 70, 0.1, 0.01, 100, reset_rate_action, 40, is_rate_modified, false, item_count, function()
+                    local rate_changed, rate_value, rate_deactivated, _, rate_dbl_clicked = UI.RateControl(ctx, 'Rate:', props.playback_rate or 1.0, UI.VALUE_BOX_W, 0.1, 0.01, 100, reset_rate_action, 40, is_rate_modified, false, item_count, function()
                         rate_value_edit.active = true
                         rate_value_edit.text = UI.FormatRateDisplayValue(props.playback_rate or 1.0)
                         rate_value_edit.want_focus = true
@@ -1382,10 +1232,9 @@ local function Main()
                     end
                     UI.QueueStyledTooltipDelayed(ctx, 'fip_rate_value', UI.GetRateTooltipLines(), 1.0)
                 else
-                    local w_rate = 70
                     UI.StyledResetButton(ctx, 'Rate:', 40, is_rate_modified, reset_rate_action)
                     r.ImGui_SameLine(ctx, 0, 2)
-                    r.ImGui_SetNextItemWidth(ctx, w_rate)
+                    r.ImGui_SetNextItemWidth(ctx, UI.VALUE_BOX_W)
                     if rate_value_edit.want_focus then
                         r.ImGui_SetKeyboardFocusHere(ctx)
                         rate_value_edit.want_focus = false
@@ -1399,7 +1248,7 @@ local function Main()
                                       | r.ImGui_InputTextFlags_AutoSelectAll()
                     local rate_submitted, new_text = r.ImGui_InputText(ctx, '##RateValue', rate_value_edit.text, input_flags)
                     rate_value_edit.text = new_text
-                    local rate_d = Utils.ClearCursorContextOnDeactivation(ctx)
+                    local rate_d = Utils.ReturnFocusOnDeactivation(ctx)
                     r.ImGui_PopStyleVar(ctx, 2)
                     r.ImGui_PopStyleColor(ctx, 2)
                     UI.QueueStyledTooltipDelayed(ctx, 'fip_rate_value', UI.GetRateTooltipLines(), 1.0)
@@ -1489,7 +1338,7 @@ local function Main()
                                       | r.ImGui_InputTextFlags_AutoSelectAll()
                     local bpm_submitted, new_text = r.ImGui_InputText(ctx, '##BpmValue', bpm_value_edit.text, input_flags)
                     bpm_value_edit.text = new_text
-                    local bpm_d = Utils.ClearCursorContextOnDeactivation(ctx)
+                    local bpm_d = Utils.ReturnFocusOnDeactivation(ctx)
                     r.ImGui_PopStyleVar(ctx, 2)
                     r.ImGui_PopStyleColor(ctx, 2)
                     UI.QueueStyledTooltipDelayed(ctx, 'fip_bpm_value', UI.GetBPMTooltipLines(), 1.0)
@@ -1522,9 +1371,6 @@ local function Main()
                 if preserve_changed and not preserve_disabled then
                     props.preserve_pitch = preserve
                     Item.UpdatePreservePitch(items, preserve)
-                    local state2 = core.GetState()
-                    state2.cached_props = Item.GetAggregatedProps(items)
-                    core.SetState(state2)
                 end
                 UI.Separator(ctx)
                 TimestrechWidget.Render(ctx, props, items, Item, UI.StyledResetButton, bar_color, bar_fg)
@@ -1671,21 +1517,21 @@ local function Main()
                                 r.ShowConsoleMsg("ERROR: FIP_SetSelectedItemsPitch not available\n")
                             end
                             props.pitch = new_pitch_val
-                            state.cached_props = Item.GetAggregatedProps(items)
-                            core.SetState(state)
                         end
                     end
+                    -- Same width for audio ("-12.34") and MIDI ("-12 st") so controls to the right never shift.
+                    local pitch_box_w = UI.VALUE_BOX_W
                     if not pitch_value_edit.active then
                         local pitch_changed, new_pitch, pitch_deactivated
                         if continuous_item_pitch then
-                            pitch_changed, new_pitch, pitch_deactivated = UI.ItemPitchControl(ctx, 'Pitch:', base_pitch, 62, -96, 96, pitch_reset_action, nil, is_modified, is_mixed, item_count, function()
+                            pitch_changed, new_pitch, pitch_deactivated = UI.ItemPitchControl(ctx, 'Pitch:', base_pitch, pitch_box_w, -96, 96, pitch_reset_action, nil, is_modified, is_mixed, item_count, function()
                                 pitch_value_edit.active = true
                                 pitch_value_edit.text = UI.FormatItemPitchValue(base_pitch)
                                 pitch_value_edit.want_focus = true
                                 value_input_reset_grace_frames = 2
                             end, UI.GetItemPitchTooltipLines(continuous_item_pitch))
                         else
-                            pitch_changed, new_pitch, pitch_deactivated = UI.VerticalPitchControl(ctx, 'Pitch:', base_pitch, 50, 0.1, -96, 96, '%.0f st', pitch_reset_action, nil, false, is_modified, is_mixed, item_count, nil, false, function()
+                            pitch_changed, new_pitch, pitch_deactivated = UI.VerticalPitchControl(ctx, 'Pitch:', base_pitch, pitch_box_w, 0.1, -96, 96, '%.0f st', pitch_reset_action, nil, false, is_modified, is_mixed, item_count, nil, false, function()
                                 pitch_value_edit.active = true
                                 pitch_value_edit.text = string.format('%.0f', math.floor((base_pitch or 0) + 0.5))
                                 pitch_value_edit.want_focus = true
@@ -1708,8 +1554,6 @@ local function Main()
                                         end
                                     end
                                 end
-                                state.cached_props = Item.GetAggregatedProps(items)
-                                core.SetState(state)
                             else
                                 Utils.with_undo("Change Pitch", function() end)
                             end
@@ -1723,8 +1567,7 @@ local function Main()
                             UI.ExtendAggHoverRegion(ctx)
                         end
                         r.ImGui_SameLine(ctx, 0, 2)
-                        local w_pitch = continuous_item_pitch and 62 or 50
-                        r.ImGui_SetNextItemWidth(ctx, w_pitch)
+                        r.ImGui_SetNextItemWidth(ctx, pitch_box_w)
                         if pitch_value_edit.want_focus then
                             r.ImGui_SetKeyboardFocusHere(ctx)
                             pitch_value_edit.want_focus = false
@@ -1738,7 +1581,7 @@ local function Main()
                                           | r.ImGui_InputTextFlags_AutoSelectAll()
                         local pitch_submitted, new_text = r.ImGui_InputText(ctx, '##PitchValue', pitch_value_edit.text, input_flags)
                         pitch_value_edit.text = new_text
-                        local pitch_d = Utils.ClearCursorContextOnDeactivation(ctx)
+                        local pitch_d = Utils.ReturnFocusOnDeactivation(ctx)
                         r.ImGui_PopStyleVar(ctx, 2)
                         r.ImGui_PopStyleColor(ctx, 2)
                         local pr2x1, pr2y1 = r.ImGui_GetItemRectMin(ctx)
@@ -1769,8 +1612,6 @@ local function Main()
                                             end
                                         end
                                     end
-                                    state.cached_props = Item.GetAggregatedProps(items)
-                                    core.SetState(state)
                                 else
                                     Utils.with_undo("Change Pitch", function() end)
                                 end
@@ -1797,38 +1638,14 @@ local function Main()
                     UI.ShowTooltipDelayedIfHoveredInAggRegion(ctx, 'agg_unified', "Aggregation Mode\nEdits add to each selected item's values.", 1.0)
                 end
                 UI.Separator(ctx)
-                local has_fx = (item_count == 1) and Item.ItemHasFX(items[1]) or false
+                local has_fx = item_count == 1 and r.APIExists and r.APIExists('FIP_GetSelectedItemsWithFXCountVal')
+                    and (r.FIP_GetSelectedItemsWithFXCountVal('', 0) or 0) > 0 or false
+                -- Alt: remove all take FX; Cmd/Ctrl: apply take FX if any, else open the chain; click: open the chain.
                 local function fx_action()
                     local mods = r.ImGui_GetKeyMods(ctx)
-                    local alt_pressed = (mods & r.ImGui_Mod_Alt()) ~= 0
-                    local cmd_pressed = (mods & r.ImGui_Mod_Super()) ~= 0
-                    local ctrl_pressed = (mods & r.ImGui_Mod_Ctrl()) ~= 0
-                    local selected_items = items
-                    if item_count > 1 then
-                        selected_items = Item.GetSelectedItems()
-                    end
-                    if alt_pressed then
-                        Item.RemoveAllFX(selected_items)
-                    elseif (cmd_pressed or ctrl_pressed) then
-                        local any_fx = false
-                        if item_count == 1 then
-                            any_fx = has_fx
-                        else
-                            for _, item in ipairs(selected_items) do
-                                if Item.ItemHasFX(item) then
-                                    any_fx = true
-                                    break
-                                end
-                            end
-                        end
-                        if any_fx then
-                            r.Main_OnCommand(40209, 0)
-                        else
-                            Item.OpenFXChain(selected_items)
-                        end
-                    else
-                        Item.OpenFXChain(selected_items)
-                    end
+                    local flags = ((mods & r.ImGui_Mod_Alt()) ~= 0 and 1 or 0)
+                        | (((mods & r.ImGui_Mod_Super()) ~= 0 or (mods & r.ImGui_Mod_Ctrl()) ~= 0) and 2 or 0)
+                    if r.APIExists and r.APIExists('FIP_ItemFXClick') then r.FIP_ItemFXClick('', flags) end
                 end
                 if has_fx then
                     local green = Theme.get('green_accent')
@@ -1840,44 +1657,37 @@ local function Main()
                 UI.Separator(ctx)
                 local loop_value = props.loop
                 local loop_mixed = (loop_value == nil)
-                local loop_changed, loop = UI.IconToggleTri(ctx, '##LoopIcon', loop_icon_looped, loop_icon_unlooped, loop_icon_mixed, loop_value, loop_mixed, 20)
+                local loop_changed, loop = UI.GlyphToggle(ctx, '##LoopIcon', UI.GLYPH.letter_L, Theme.get('toggle_loop'), loop_value, loop_mixed, 20)
                 if loop_changed then
                     props.loop = loop
                     Item.UpdateLoop(items, loop)
-                    state.cached_props = Item.GetAggregatedProps(items)
-                    core.SetState(state)
                 end
                 r.ImGui_SameLine(ctx, 0, 8)
                 local reverse_value = props.reverse
                 local reverse_mixed = (reverse_value == nil)
-                local reverse_changed, reverse = UI.IconToggleTri(ctx, '##ReverseIcon', reverse_icon_reversed, reverse_icon_unreversed, reverse_icon_mixed, reverse_value, reverse_mixed, 20)
+                local reverse_changed, reverse = UI.GlyphToggle(ctx, '##ReverseIcon', UI.GLYPH.reverse, Theme.get('toggle_reverse'), reverse_value, reverse_mixed, 20)
                 if reverse_changed then
                     props.reverse = reverse
                     Item.UpdateReverse(items, reverse)
-                    state.cached_props = Item.GetAggregatedProps(items)
-                    core.SetState(state)
                 end
                 r.ImGui_SameLine(ctx, 0, 8)
                 local mute_value = props.mute
                 local mute_mixed = (mute_value == nil)
-                local mute_changed, mute = UI.IconToggleTri(ctx, '##MuteIcon', mute_icon_muted, mute_icon_unmuted, mute_icon_mixed, mute_value, mute_mixed, 20)
+                local mute_changed, mute = UI.GlyphToggle(ctx, '##MuteIcon', UI.GLYPH.letter_M, Theme.get('toggle_red'), mute_value, mute_mixed, 20)
                 if mute_changed then
                     props.mute = mute
                     Item.UpdateMute(items, mute)
-                    state.cached_props = Item.GetAggregatedProps(items)
-                    core.SetState(state)
                 end
                 r.ImGui_SameLine(ctx, 0, 8)
                 local lock_value = props.lock
                 local lock_mixed = (lock_value == nil)
-                local lock_changed, lock = UI.IconToggleTri(ctx, '##LockIcon', lock_icon_locked, lock_icon_unlocked, lock_icon_mixed, lock_value, lock_mixed, 20)
+                local lock_changed, lock = UI.GlyphToggle(ctx, '##LockIcon', UI.GLYPH.lock, Theme.get('toggle_red'), lock_value, lock_mixed, 20)
                 if lock_changed then
                     props.lock = lock
                     Item.UpdateLock(items, lock)
-                    state.cached_props = Item.GetAggregatedProps(items)
-                    core.SetState(state)
                 end
                 UI.Separator(ctx)
+                DrawItemInfoLine(ctx)
                 r.ImGui_EndGroup(ctx)
             end
             end

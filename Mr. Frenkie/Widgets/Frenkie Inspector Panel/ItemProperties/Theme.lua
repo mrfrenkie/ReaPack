@@ -1,5 +1,4 @@
 -- @noindex
-
 ---@diagnostic disable: undefined-global, undefined-field
 local r = reaper
 local Theme = {}
@@ -37,6 +36,27 @@ function Theme.getMainWindowTransportBackground()
     gg = clamp255((tonumber(gg) or 35) * 0.95)
     bb = clamp255((tonumber(bb) or 35) * 0.95)
     return Theme.rgba(rr, gg, bb, 255)
+end
+
+-- Рамка окна виджета. Фон окна берётся из темы REAPER, поэтому окно сливается
+-- с фоном: край отмечаем едва заметной линией чуть светлее фона на тёмной теме
+-- и чуть темнее на светлой.
+function Theme.getMainWindowBorder()
+    local rr, gg, bb = 35, 35, 35
+    if r.GetThemeColor and r.ColorFromNative then
+        local native = r.GetThemeColor('col_main_bg2', 0)
+        if native and native ~= -1 then
+            rr, gg, bb = r.ColorFromNative(native)
+            rr = tonumber(rr) or 35
+            gg = tonumber(gg) or 35
+            bb = tonumber(bb) or 35
+        end
+    end
+    local luma = 0.2126 * rr + 0.7152 * gg + 0.0722 * bb
+    if luma < 128 then
+        return Theme.rgba(255, 255, 255, 18)
+    end
+    return Theme.rgba(0, 0, 0, 18)
 end
 
 Theme.colors = {
@@ -84,6 +104,14 @@ Theme.colors = {
     tooltip_text = Theme.rgba(0, 0, 0, 255),
     tooltip_fx_bypass = Theme.rgba(180, 85, 0, 255),
     tooltip_fx_disabled = Theme.rgba(120, 38, 38, 255),
+
+    -- Тумблеры айтема (Loop / Reverse / Mute / Lock): цветной квадрат со знаком
+    toggle_loop = Theme.rgba(82, 163, 141, 255),    -- Loop включён
+    toggle_reverse = Theme.rgba(48, 149, 186, 255), -- Reverse включён
+    toggle_red = Theme.rgba(198, 75, 97, 255),      -- Mute / Lock включены
+    toggle_mixed = Theme.rgba(242, 175, 13, 255),   -- Смешанное состояние
+    toggle_off = Theme.rgba(38, 38, 38, 255),       -- Выключен
+    toggle_off_symbol = Theme.rgba(89, 89, 89, 255), -- Знак выключенного тумблера
 }
 
 function Theme.get(name)

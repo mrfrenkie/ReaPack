@@ -1,5 +1,4 @@
 -- @noindex
-
 ---@diagnostic disable: undefined-global, undefined-field
 local r = reaper
 
@@ -10,7 +9,6 @@ package.path = script_dir .. "?.lua;" .. script_dir .. "?/init.lua;" .. package.
 local Utils = require("Utils")
 local UI = require("UIComponents")
 local Theme = require("Theme")
-local Core = require("Core")
 local Item = require("Item")
 
 local TimestrechWidget = {}
@@ -170,14 +168,7 @@ local function apply_mode(props, items, alg, bits)
                 props.mode = math.floor(a)
                 props.mode_bits = (type(b) == "number" and b >= 0) and math.floor(b) or 0
             end
-            local state = Core.GetState()
-            local cached = state.cached_props or {}
-            cached.take_type = props.take_type
-            cached.mode = props.mode
-            cached.mode_bits = props.mode_bits
-            state.cached_props = cached
-            Core.SetState(state)
-            Utils.DeferClearCursorContext()
+            Utils.DeferReturnFocus()
             return
         end
     end
@@ -192,13 +183,10 @@ local function apply_mode(props, items, alg, bits)
             end
         end)
     end
-    Utils.DeferClearCursorContext()
-    local state = Core.GetState()
-    state.cached_props = Item.GetAggregatedProps(items)
-    Core.SetState(state)
+    Utils.DeferReturnFocus()
 end
 
-function TimestrechWidget.Render(ctx, props, items, core, StyledResetButton, accent_color, accent_text_color)
+function TimestrechWidget.Render(ctx, props, items, _, StyledResetButton, accent_color, accent_text_color)
     if props.take_type == "MIDI" then
         RenderDisabledModeLabel(ctx)
         r.ImGui_SameLine(ctx, 0, 5)

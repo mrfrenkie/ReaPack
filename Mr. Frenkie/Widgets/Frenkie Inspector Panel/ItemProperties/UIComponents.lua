@@ -1,6 +1,4 @@
 -- @noindex
-
--- @noindex
 ---@diagnostic disable: undefined-global, undefined-field
 local r = reaper
 local script_path = debug.getinfo(1, "S").source:match("@(.*)")
@@ -10,6 +8,40 @@ local Theme = require("Theme")
 local Utils = require("Utils")
 
 local UIComponents = {}
+
+-- Width of the item value boxes (Rate, Pitch), fixed so controls to their right never shift.
+UIComponents.VALUE_BOX_W = 62
+
+-- Icon font: fonts/FIPIcons.ttf, loaded by UI.lua with CreateFontFromFile and handed over via SetIconFont.
+-- Glyphs sit in the private use area and are ink-centered in their 1000x1000 cells.
+local _icon_font = nil
+
+UIComponents.GLYPH = {
+    track = 0xE100, reverse = 0xE101, lock = 0xE102, instrument = 0xE103, reset = 0xE104,
+    letter_L = 0xE105, letter_M = 0xE106, eye = 0xE107, eye_off = 0xE108, trash = 0xE109,
+    audio = 0xE110, midi = 0xE111, ara = 0xE112, video = 0xE113, videofx = 0xE114,
+    click = 0xE115, ltc = 0xE116, subproject = 0xE117, empty = 0xE118, mixed = 0xE119,
+    env_lane = 0xE130, env_point = 0xE131, env_razor = 0xE132, env_segment = 0xE133,
+}
+
+-- Header columns. The first two buttons of the parameter row use the same widths and gap,
+-- so they sit right under the header icon and the track spine in both modes.
+UIComponents.HEADER_SLOT_W = 24
+UIComponents.HEADER_SLOT_GAP = 7
+UIComponents.HEADER_SPINE_W = 24
+UIComponents.HEADER_SPINE_GAP = 4
+-- The name part starts this far under the number tab, which covers its left rounding (one block).
+UIComponents.HEADER_TAB_OVERLAP = 6
+-- Text padding of a name field joined to the tab: regular 8 px plus the overlap.
+UIComponents.HEADER_JOINED_PAD_X = 8 + UIComponents.HEADER_TAB_OVERLAP
+
+function UIComponents.SetIconFont(font)
+    _icon_font = font
+end
+
+function UIComponents.GetIconFont()
+    return _icon_font
+end
 
 local ITEM_INFO_PROPERTIES_ACTION = 40009
 local STYLED_TOOLTIP_DELAY_DEFAULT = 1.0
@@ -241,26 +273,6 @@ function UIComponents.BarColorButtonVariants(rr, gg, bb)
         Theme.rgba(clamp255(rr + dh2), clamp255(gg + dh2), clamp255(bb + dh2), aa)
 end
 
-function UIComponents.BarForegroundU32(rr, gg, bb)
-    local u, _ = UIComponents.BarForegroundPick(rr, gg, bb)
-    return u
-end
-
-function UIComponents.PushBlackText(ctx, flag)
-    if flag then
-        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), Theme.get('black'))
-        local ok, col = pcall(r.ImGui_Col_TextDisabled)
-        if ok then r.ImGui_PushStyleColor(ctx, col, Theme.get('black')) end
-    end
-end
-
-function UIComponents.PopBlackText(ctx, flag)
-    if flag then
-        local ok = pcall(r.ImGui_Col_TextDisabled)
-        if ok then r.ImGui_PopStyleColor(ctx, 2) else r.ImGui_PopStyleColor(ctx, 1) end
-    end
-end
-
 -- Always pushes Text (+ TextDisabled when available).
 function UIComponents.PushBarForegroundText(ctx, foreground_u32)
     local fg = foreground_u32 or Theme.get('text_white_soft')
@@ -272,11 +284,6 @@ end
 function UIComponents.PopBarForegroundText(ctx)
     local ok = pcall(r.ImGui_Col_TextDisabled)
     if ok then r.ImGui_PopStyleColor(ctx, 2) else r.ImGui_PopStyleColor(ctx, 1) end
-end
-
-function UIComponents.ShouldUseBlackText(r_val, g_val, b_val)
-    local _, dark = UIComponents.BarForegroundPick(r_val, g_val, b_val)
-    return dark
 end
 
 function UIComponents.GetBarColorAndUseBlack(items, tracks, props)
@@ -345,79 +352,6 @@ function UIComponents.StyledResetButton(ctx, label, width, is_modified, action, 
     if pop_label > 0 then r.ImGui_PopStyleColor(ctx, pop_label) end
 end
 
-function UIComponents.StyledImageButton(ctx, id, icon, size, action, disabled, tint_color, button_colors, use_overlay)
-    disabled = disabled or false
-    use_overlay = use_overlay == true
-    local tint = tint_color or Theme.get('text_white_soft')
-    local colors = button_colors
-    if colors then
-        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), colors.base or Theme.get('transparent'))
-        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), colors.hover or colors.base or Theme.get('transparent'))
-        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), colors.active or colors.hover or colors.base or Theme.get('transparent'))
-    else
-        UIComponents.PushTransparentButtonStates(ctx, disabled)
-    end
-    if disabled then r.ImGui_BeginDisabled(ctx, true) end
-
-    local clicked = false
-    if icon then
-        clicked = r.ImGui_ImageButton(ctx, id or '##img_btn', icon, size, size, 0, 0, 1, 1, nil, tint)
-        if use_overlay then UIComponents.DrawHoverActiveOverlay(ctx) end
-    else
-        clicked = r.ImGui_Button(ctx, '', size, size)
-    end
-
-    if clicked and not disabled and action then
-        action()
-    end
-
-    if disabled then r.ImGui_EndDisabled(ctx) end
-    r.ImGui_PopStyleColor(ctx, 3)
-end
-
-function UIComponents.DrawImageCenteredInLastItem(ctx, icon, tint_color, padding)
-    if not icon then return end
-    local x1, y1 = r.ImGui_GetItemRectMin(ctx)
-    local x2, y2 = r.ImGui_GetItemRectMax(ctx)
-    local rect_w = x2 - x1
-    local rect_h = y2 - y1
-    local tex_w, tex_h = r.ImGui_Image_GetSize(icon)
-    tex_w = tonumber(tex_w) or 1
-    tex_h = tonumber(tex_h) or 1
-    if tex_w <= 0 then tex_w = 1 end
-    if tex_h <= 0 then tex_h = 1 end
-
-    local inner_pad = padding or 3
-    local max_w = math.max(1, rect_w - inner_pad * 2)
-    local max_h = math.max(1, rect_h - inner_pad * 2)
-    local scale = math.min(max_w / tex_w, max_h / tex_h)
-    local draw_w = tex_w * scale
-    local draw_h = tex_h * scale
-    local draw_x1 = x1 + (rect_w - draw_w) * 0.5
-    local draw_y1 = y1 + (rect_h - draw_h) * 0.5
-    local draw_x2 = draw_x1 + draw_w
-    local draw_y2 = draw_y1 + draw_h
-
-    local dl = r.ImGui_GetWindowDrawList(ctx)
-    r.ImGui_DrawList_AddImage(dl, icon, draw_x1, draw_y1, draw_x2, draw_y2, 0, 0, 1, 1,
-        tint_color or Theme.get('text_white_soft'))
-end
-
-function UIComponents.ShowTooltipDelayedIfHovered(ctx, key, text, delay)
-    local hovered = r.ImGui_IsItemHovered(ctx)
-    if hovered and text and text ~= '' then
-        local now = r.time_precise()
-        local t = _hover_timers[key]
-        if not t then
-            _hover_timers[key] = now
-        elseif now - t >= (delay or 0.5) then
-            _pending_tooltip_lines = split_tooltip_lines(text)
-        end
-    else
-        _hover_timers[key] = nil
-    end
-end
-
 function UIComponents.ResetAggHoverRegion()
     _agg_region = nil
 end
@@ -452,17 +386,16 @@ function UIComponents.ShowTooltipDelayedIfHoveredInAggRegion(ctx, key, text, del
     end
 end
 
-function UIComponents.IsMouseInsideAggRegion(ctx)
-    if not _agg_region then return false end
-    local mx, my = r.ImGui_GetMousePos(ctx)
-    return mx >= _agg_region.x1 and mx <= _agg_region.x2 and my >= _agg_region.y1 and my <= _agg_region.y2
-end
-
 function UIComponents.RenderPendingTooltip(ctx)
     if _pending_tooltip_lines and #_pending_tooltip_lines > 0 then
         render_styled_tooltip_lines(ctx, _pending_tooltip_lines)
         _pending_tooltip_lines = nil
     end
+end
+
+-- Tooltip of a panel the extension draws: it already ran the hover delays; shown like a queued one.
+function UIComponents.SetPendingTooltipText(text)
+    if text and text ~= '' then _pending_tooltip_lines = split_tooltip_lines(text) end
 end
 
 function UIComponents.SetTooltipFont(font, pixel_size)
@@ -592,11 +525,12 @@ function UIComponents.GetItemPitchTooltipLines(continuous_item_pitch)
     }
 end
 
-function UIComponents.GetVolumeFaderTooltipLines()
+function UIComponents.GetVolumeFaderTooltipLines(target)
     return {
-        'Drag — Item Volume (dB)',
+        (target == 'item' and 'Drag — Item Volume (dB)' or 'Drag — Take Volume (dB)'),
+        shift_label() .. '+Drag — Fine',
         'Double-Click — Reset',
-        alt_label() .. '+Click — Enter Value',
+        alt_label() .. '+Click — Enter Value (dB or -inf)',
         'Reset Button — Unity Gain',
         'Multiple Items — Relative Change',
     }
@@ -605,10 +539,18 @@ end
 function UIComponents.GetVelocityFaderTooltipLines()
     return {
         'Drag — MIDI Velocity Scale',
+        shift_label() .. '+Drag — Fine',
         'Double-Click — Reset',
         alt_label() .. '+Click — Enter Value',
         'Reset Button — 1.00x',
         'Multiple Items — Relative Change',
+    }
+end
+
+function UIComponents.GetLevelMixedTooltipLines()
+    return {
+        'Mixed Selection — Audio + MIDI or Empty Items',
+        'Select one type to edit Volume or Velocity',
     }
 end
 
@@ -698,8 +640,10 @@ function UIComponents.GetNoFxTooltipLines()
     }
 end
 
+local SEPARATOR_PAD = 8
+
 function UIComponents.Separator(ctx, left, right)
-    left = left or 8
+    left = left or SEPARATOR_PAD
     right = right or left
     r.ImGui_SameLine(ctx, 0, left)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), Theme.get('pipe_gray'))
@@ -708,11 +652,387 @@ function UIComponents.Separator(ctx, left, right)
     r.ImGui_SameLine(ctx, 0, right)
 end
 
-function UIComponents.IconDisplay(ctx, icon, size)
-    size = size or 19
-    if icon then
-        r.ImGui_Image(ctx, icon, size, size)
+function UIComponents.DrawGlyphCentered(ctx, x1, y1, w, h, cp, size, col)
+    if not _icon_font or not cp then return end
+    local s = utf8.char(cp)
+    r.ImGui_PushFont(ctx, _icon_font, size)
+    local tw, th = r.ImGui_CalcTextSize(ctx, s)
+    r.ImGui_PopFont(ctx)
+    r.ImGui_DrawList_AddTextEx(r.ImGui_GetWindowDrawList(ctx), _icon_font, size,
+        x1 + (w - tw) * 0.5, y1 + (h - th) * 0.5, col, s)
+end
+
+function UIComponents.DrawGlyphInLastItem(ctx, cp, size, col)
+    local x1, y1 = r.ImGui_GetItemRectMin(ctx)
+    local x2, y2 = r.ImGui_GetItemRectMax(ctx)
+    UIComponents.DrawGlyphCentered(ctx, x1, y1, x2 - x1, y2 - y1, cp, size, col)
+end
+
+-- Height of the header row: the name field frame (padding 8,4).
+function UIComponents.HeaderHeight(ctx)
+    return r.ImGui_GetTextLineHeight(ctx) + 8
+end
+
+-- Track / item kind icon; one fixed slot for every kind so the name never shifts. opts (optional):
+-- clickable (hover highlight; returns clicked, hovered — hover counts while a popup is open),
+-- badge (color of a dot in the top-right corner).
+function UIComponents.HeaderIconSlot(ctx, cp, opts)
+    local w, h = UIComponents.HEADER_SLOT_W, UIComponents.HeaderHeight(ctx)
+    local clicked, hovered = false, false
+    local dl = r.ImGui_GetWindowDrawList(ctx)
+    if opts and opts.clickable then
+        clicked = r.ImGui_InvisibleButton(ctx, '##fip_header_icon', w, h)
+        local active = r.ImGui_IsItemActive(ctx)
+        hovered = r.ImGui_IsItemHovered(ctx, r.ImGui_HoveredFlags_AllowWhenBlockedByPopup())
+        if active or hovered then
+            local x1, y1 = r.ImGui_GetItemRectMin(ctx)
+            r.ImGui_DrawList_AddRectFilled(dl, x1, y1, x1 + w, y1 + h,
+                Theme.get(active and 'active_white_64' or 'hover_white_32'), 4)
+        end
+    else
+        r.ImGui_Dummy(ctx, w, h)
+    end
+    UIComponents.DrawGlyphInLastItem(ctx, cp, 17, Theme.get('text_white_soft'))
+    if opts and opts.badge then
+        local x2 = r.ImGui_GetItemRectMax(ctx)
+        local _, y1 = r.ImGui_GetItemRectMin(ctx)
+        r.ImGui_DrawList_AddCircleFilled(dl, x2 - 4, y1 + 4, 4.5, Theme.get('gray_30'))
+        r.ImGui_DrawList_AddCircleFilled(dl, x2 - 4, y1 + 4, 3, opts.badge)
+    end
+    r.ImGui_SameLine(ctx, 0, UIComponents.HEADER_SLOT_GAP)
+    return clicked, hovered
+end
+
+-- Track automation (FIP_TrackAutomation*). The badge on the track icon: no dot without envelopes, yellow when
+-- some are hidden (automation you cannot see in the arrange), gray when all are bypassed, white otherwise.
+UIComponents.AUTOMATION_POPUP = '##fip_track_automation'
+local AUTOMATION_NAME_W = 220
+-- The list opens when the icon is hovered this long (not when the mouse just passes by) and closes when
+-- the mouse has been away from both the icon and the list this long (the gap between them is crossed).
+local AUTOMATION_OPEN_DELAY, AUTOMATION_CLOSE_DELAY = 0.12, 0.35
+local _automation_hover_since, _automation_away_since = nil, nil
+
+function UIComponents.AutomationBadge(st)
+    if (tonumber(st.envs) or 0) == 0 then return nil end
+    if (tonumber(st.hidden) or 0) > 0 then return Theme.get('toggle_mixed') end
+    if (tonumber(st.active) or 0) == 0 then return Theme.get('text_gray') end
+    return Theme.get('text_white_soft')
+end
+
+-- Envelope list of the selected tracks, under the track icon (anchor = { x, y, hovered, clicked, has_envs }):
+-- it opens on hover when there are envelopes (or on click), eye = show / hide that envelope, name = show it
+-- and select it, footer = show all / only active / hide all. The list is read only while it is open.
+function UIComponents.TrackAutomationPopup(ctx, anchor)
+    local id, now = UIComponents.AUTOMATION_POPUP, r.time_precise()
+    if not r.ImGui_IsPopupOpen(ctx, id) then
+        _automation_away_since = nil
+        _automation_hover_since = (anchor.hovered and anchor.has_envs) and (_automation_hover_since or now) or nil
+        if anchor.clicked or (_automation_hover_since and now - _automation_hover_since >= AUTOMATION_OPEN_DELAY) then
+            r.ImGui_OpenPopup(ctx, id)
+            _automation_hover_since = nil
+        end
+    end
+    r.ImGui_SetNextWindowPos(ctx, anchor.x, anchor.y, r.ImGui_Cond_Appearing())
+    if not r.ImGui_BeginPopup(ctx, id) then return end
+    local st = Utils.ParseKeyValues(r.FIP_TrackAutomationGetStateStr('', 1))
+    local envs = tonumber(st.envs) or 0
+    local multi = (tonumber(st.tracks) or 0) > 1
+    local gray, white = Theme.get('text_gray'), Theme.get('text_white_soft')
+    if envs == 0 then
+        r.ImGui_TextColored(ctx, gray, multi and 'No envelopes on the selected tracks' or 'No envelopes on this track')
+    end
+    local line_h = r.ImGui_GetTextLineHeight(ctx)
+    local last_tr
+    for i = 1, envs do
+        local tr, env = tonumber(st['tr' .. i]) or 0, tonumber(st['env' .. i]) or 0
+        if multi and tr ~= last_tr then
+            if last_tr then r.ImGui_Spacing(ctx) end
+            r.ImGui_TextColored(ctx, gray, (st['trnum' .. (tr + 1)] or '') .. '  ' .. (st['trname' .. (tr + 1)] or ''))
+            last_tr = tr
+        end
+        local vis, act = st['vis' .. i] == '1', st['act' .. i] == '1'
+        if r.ImGui_InvisibleButton(ctx, '##fip_env_vis' .. i, 20, line_h) then
+            r.FIP_TrackAutomationSetVisible(tr, env, vis and 0 or 1)
+        end
+        UIComponents.DrawGlyphInLastItem(ctx, vis and UIComponents.GLYPH.eye or UIComponents.GLYPH.eye_off, 14,
+            vis and white or gray)
+        r.ImGui_SameLine(ctx, 0, 6)
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), act and white or gray)
+        if r.ImGui_Selectable(ctx, (st['name' .. i] or '?') .. '##fip_env_name' .. i, false, 0, AUTOMATION_NAME_W, 0) then
+            r.FIP_TrackAutomationReveal(tr, env)
+        end
+        r.ImGui_PopStyleColor(ctx, 1)
+        r.ImGui_SameLine(ctx, 0, 8)
+        local pts, ai = tonumber(st['pts' .. i]) or 0, tonumber(st['ai' .. i]) or 0
+        local info = ('%d pt%s'):format(pts, pts == 1 and '' or 's')
+        if ai > 0 then info = info .. (', %d AI'):format(ai) end
+        if not act then info = info .. ', bypassed' end
+        r.ImGui_TextColored(ctx, gray, info)
+    end
+    if envs > 0 then
+        r.ImGui_Separator(ctx)
+        if r.ImGui_Button(ctx, 'Show all') then r.FIP_TrackAutomationSetVisible(-1, -1, 1) end
         r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, 'Only active') then r.FIP_TrackAutomationSetVisible(-1, -1, 2) end
+        r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, 'Hide all') then r.FIP_TrackAutomationSetVisible(-1, -1, 0) end
+    end
+    if anchor.hovered or r.ImGui_IsWindowHovered(ctx, r.ImGui_HoveredFlags_RootAndChildWindows()) then
+        _automation_away_since = nil
+    else
+        _automation_away_since = _automation_away_since or now
+        if now - _automation_away_since >= AUTOMATION_CLOSE_DELAY then
+            r.ImGui_CloseCurrentPopup(ctx)
+            _automation_away_since = nil
+        end
+    end
+    r.ImGui_EndPopup(ctx)
+end
+
+-- Track number tab in the track color (or a count for several tracks), rounded on the left only:
+-- it is the left end of one block with the track name next to it.
+function UIComponents.DrawHeaderTab(ctx, x1, y1, text, bg, fg)
+    local w, h = UIComponents.HEADER_SPINE_W, UIComponents.HeaderHeight(ctx)
+    local dl = r.ImGui_GetWindowDrawList(ctx)
+    r.ImGui_DrawList_AddRectFilled(dl, x1, y1, x1 + w, y1 + h, bg, 6, r.ImGui_DrawFlags_RoundCornersLeft())
+    local tw, th = r.ImGui_CalcTextSize(ctx, text)
+    r.ImGui_DrawList_AddText(dl, x1 + (w - tw) * 0.5, y1 + (h - th) * 0.5, fg, text)
+end
+
+-- Cuts text on UTF-8 character boundaries and adds an ellipsis until it fits max_w.
+local function fit_text_end(ctx, text, max_w)
+    if r.ImGui_CalcTextSize(ctx, text) <= max_w then return text end
+    local n = utf8.len(text)
+    if not n then return text end
+    for k = n - 1, 1, -1 do
+        local cut = text:sub(1, utf8.offset(text, k + 1) - 1) .. '…'
+        if r.ImGui_CalcTextSize(ctx, cut) <= max_w then return cut end
+    end
+    return '…'
+end
+
+-- Width of the item mode track block: it starts above N and ends where the Rate box ends in the
+-- parameter row (UI.lua: N, |, reset 24, |, "Rate:" 40 + 2, value box). It depends only on the font,
+-- so the item name bar never shifts.
+local function header_track_block_w(ctx)
+    local sep_w = SEPARATOR_PAD * 2 + r.ImGui_CalcTextSize(ctx, '|')
+    return UIComponents.HEADER_SPINE_W + sep_w + 24 + sep_w + 40 + 2 + UIComponents.VALUE_BOX_W
+end
+
+-- Item mode: the item's track as one fixed-width block, number tab + "‹ Name" (back up to the track). A click anywhere on it
+-- returns true (the caller switches to track mode).
+function UIComponents.HeaderTrackBlock(ctx, number_text, tab_bg, tab_fg, name)
+    local h = UIComponents.HeaderHeight(ctx)
+    local tab_w = UIComponents.HEADER_SPINE_W
+    local name_w = header_track_block_w(ctx) - tab_w
+    local clicked = r.ImGui_InvisibleButton(ctx, '##fip_track_block', tab_w + name_w, h)
+    local x1, y1 = r.ImGui_GetItemRectMin(ctx)
+    local dl = r.ImGui_GetWindowDrawList(ctx)
+    local active, hovered = r.ImGui_IsItemActive(ctx), r.ImGui_IsItemHovered(ctx)
+    local name_bg = active and Theme.get('gray_74') or (hovered and Theme.get('gray_58') or Theme.get('gray_42'))
+    r.ImGui_DrawList_AddRectFilled(dl, x1 + tab_w - UIComponents.HEADER_TAB_OVERLAP, y1, x1 + tab_w + name_w, y1 + h,
+        name_bg, 6, r.ImGui_DrawFlags_RoundCornersRight())
+    UIComponents.DrawHeaderTab(ctx, x1, y1, number_text, tab_bg, tab_fg)
+    if active or hovered then
+        r.ImGui_DrawList_AddRectFilled(dl, x1, y1, x1 + tab_w, y1 + h,
+            Theme.get(active and 'active_white_64' or 'hover_white_32'), 6, r.ImGui_DrawFlags_RoundCornersLeft())
+    end
+    local arrow = '‹  ' -- back up to the track
+    local label = arrow .. fit_text_end(ctx, name or '', name_w - 16 - r.ImGui_CalcTextSize(ctx, arrow))
+    local _, th = r.ImGui_CalcTextSize(ctx, label)
+    r.ImGui_DrawList_AddText(dl, x1 + tab_w + 8, y1 + (h - th) * 0.5, Theme.get('text_white_soft'), label)
+    r.ImGui_SameLine(ctx, 0, UIComponents.HEADER_SPINE_GAP)
+    return clicked
+end
+
+-- Item textures, one per item kind; each draws inside [x0, x2] x [y1, y2] (the caller clips).
+local ITEM_PATTERNS = {}
+
+function ITEM_PATTERNS.audio(dl, x0, x2, y1, y2, col) -- waveform
+    local cy = (y1 + y2) * 0.5
+    for x = x0, x2, 3 do
+        local u = x - x0
+        local a = (math.abs(math.sin(u * 0.13)) * 0.6 + math.abs(math.sin(u * 0.047)) * 0.4) * (y2 - y1) * 0.36
+        r.ImGui_DrawList_AddLine(dl, x, cy - a, x, cy + a, col, 1)
+    end
+end
+
+function ITEM_PATTERNS.midi(dl, x0, x2, y1, y2, col) -- piano roll: chords and single notes
+    local rows = 6
+    local step = (y2 - y1 - 6) / (rows - 1)
+    local x, i = x0, 0
+    while x < x2 do
+        local len = 8 + (i * 5) % 10
+        local root = (i * 3 + i // 2) % 3
+        local voices = (i % 3 == 2) and 1 or (2 + i % 2)
+        for v = 0, voices - 1 do
+            local y = y2 - 3 - (root + v * 2) % rows * step
+            r.ImGui_DrawList_AddLine(dl, x, y, x + len, y, col, 2)
+        end
+        x = x + len + 4
+        i = i + 1
+    end
+end
+
+function ITEM_PATTERNS.ara(dl, x0, x2, y1, y2, col) -- Melodyne-like blobs at different pitches
+    local x, i = x0, 0
+    while x < x2 do
+        local len = 14 + (i * 9) % 18
+        local cy = y1 + 6 + ((i * 5 + i // 2) % 4) * (y2 - y1 - 12) / 3
+        for dx = 0, len, 2 do
+            local a = math.sin(math.pi * dx / len) * 3.5 + 0.5
+            r.ImGui_DrawList_AddLine(dl, x + dx, cy - a, x + dx, cy + a, col, 1)
+        end
+        x = x + len + 6
+        i = i + 1
+    end
+end
+
+function ITEM_PATTERNS.video(dl, x0, x2, y1, y2, col) -- film strip
+    for x = x0, x2, 6 do
+        r.ImGui_DrawList_AddRectFilled(dl, x, y1 + 2, x + 3, y1 + 4, col)
+        r.ImGui_DrawList_AddRectFilled(dl, x, y2 - 4, x + 3, y2 - 2, col)
+    end
+    for x = x0, x2, 24 do
+        r.ImGui_DrawList_AddLine(dl, x, y1 + 6, x, y2 - 6, col, 1)
+    end
+end
+
+function ITEM_PATTERNS.videofx(dl, x0, x2, y1, y2, col) -- frames with scan lines
+    for y = y1 + 4, y2 - 4, 3 do
+        r.ImGui_DrawList_AddLine(dl, x0, y, x2, y, col, 1)
+    end
+    for x = x0, x2, 24 do
+        r.ImGui_DrawList_AddLine(dl, x, y1 + 2, x, y2 - 2, col, 2)
+    end
+end
+
+function ITEM_PATTERNS.click(dl, x0, x2, y1, y2, col) -- beat ticks, every 4th taller
+    local i = 0
+    for x = x0, x2, 8 do
+        local downbeat = (i % 4 == 0)
+        local inset = downbeat and 3 or (y2 - y1) * 0.32
+        r.ImGui_DrawList_AddLine(dl, x, y1 + inset, x, y2 - inset, col, downbeat and 2 or 1)
+        i = i + 1
+    end
+end
+
+function ITEM_PATTERNS.ltc(dl, x0, x2, y1, y2, col) -- bi-phase timecode square wave
+    local hi, lo = y1 + 5, y2 - 5
+    local bits = { 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1 }
+    local y, x, i, cell = hi, x0, 0, 8
+    local function flip(at)
+        local ny = (y == hi) and lo or hi
+        r.ImGui_DrawList_AddLine(dl, at, y, at, ny, col, 1)
+        y = ny
+    end
+    while x < x2 do
+        flip(x)
+        if bits[i % #bits + 1] == 1 then
+            r.ImGui_DrawList_AddLine(dl, x, y, x + cell / 2, y, col, 1)
+            flip(x + cell / 2)
+            r.ImGui_DrawList_AddLine(dl, x + cell / 2, y, x + cell, y, col, 1)
+        else
+            r.ImGui_DrawList_AddLine(dl, x, y, x + cell, y, col, 1)
+        end
+        x = x + cell
+        i = i + 1
+    end
+end
+
+function ITEM_PATTERNS.subproject(dl, x0, x2, y1, y2, col) -- mini tracks with item blocks
+    local lanes = 3
+    local lh = (y2 - y1 - 6) / lanes
+    for l = 0, lanes - 1 do
+        local y = y1 + 3 + l * lh
+        local x, i = x0 + (l * 9) % 17, l
+        while x < x2 do
+            local len = 14 + (i * 17) % 26
+            r.ImGui_DrawList_AddRectFilled(dl, x, y + 1, x + len, y + lh - 1, col, 1)
+            x = x + len + 6 + (i * 7) % 12
+            i = i + 1
+        end
+    end
+end
+
+function ITEM_PATTERNS.empty(dl, x0, x2, y1, y2, col) -- diagonal hatching
+    local h = y2 - y1
+    for x = x0 - h, x2, 7 do
+        r.ImGui_DrawList_AddLine(dl, x, y2, x + h, y1, col, 1)
+    end
+end
+
+-- Texture of the item kind over the last item (the name bar). The pattern is anchored to the bar's left
+-- edge, so it never moves between items; the name masks it and the texture shows from just after the name.
+function UIComponents.DrawItemTexture(ctx, kind, text, col)
+    local pattern = ITEM_PATTERNS[kind]
+    if not pattern then return end
+    local x1, y1 = r.ImGui_GetItemRectMin(ctx)
+    local x2, y2 = r.ImGui_GetItemRectMax(ctx)
+    local origin, x_end = x1, x2 - 8
+    local visible_from = x1 + 8 + r.ImGui_CalcTextSize(ctx, text or '') + 16
+    if visible_from >= x_end then return end
+    local dl = r.ImGui_GetWindowDrawList(ctx)
+    r.ImGui_DrawList_PushClipRect(dl, visible_from, y1, x_end, y2, true)
+    pattern(dl, origin, x_end, y1, y2, col)
+    r.ImGui_DrawList_PopClipRect(dl)
+end
+
+-- Item info line (FIP_ItemInfoGetStateStr): REAPER's mouse editing help for the selected or edited item,
+-- right-aligned in the rest of the current row. Each value gets a column as wide as its text with every
+-- digit set to 8, so the line does not jitter while dragging. When the full line does not fit, values drop
+-- the secondary time unit; when that does not fit either, the line is hidden.
+local INFO_INNER_GAP, INFO_FIELD_GAP, INFO_MIN_GAP = 4, 12, 16
+
+local function info_cell_w(ctx, text)
+    if text == '' then return 0 end
+    return (r.ImGui_CalcTextSize(ctx, (text:gsub('%d', '8'))))
+end
+
+function UIComponents.ItemInfoLine(ctx, raw)
+    local st = Utils.ParseKeyValues(raw)
+    local n = tonumber(st.n) or 0
+    if n == 0 then return end
+    local fields = {}
+    for i = 1, n do
+        local d, e = st['d' .. i] or '', st['e' .. i] or ''
+        fields[i] = {
+            label = (st['l' .. i] or '') .. ':',
+            full = { st['v' .. i] or '', d ~= '' and ('[' .. d .. ']') or '' },
+            short = { st['s' .. i] or '', e ~= '' and ('[' .. e .. ']') or '' },
+        }
+    end
+    local function width(form)
+        local w = 0
+        for i, f in ipairs(fields) do
+            local v = f[form]
+            w = w + (i > 1 and INFO_FIELD_GAP or 0) + r.ImGui_CalcTextSize(ctx, f.label) + INFO_INNER_GAP + info_cell_w(ctx, v[1])
+            if v[2] ~= '' then w = w + INFO_INNER_GAP + info_cell_w(ctx, v[2]) end
+        end
+        return w
+    end
+    local x, y = r.ImGui_GetCursorScreenPos(ctx)
+    local room = r.ImGui_GetContentRegionAvail(ctx) - INFO_MIN_GAP
+    local form, w = 'full', width('full')
+    if w > room then form, w = 'short', width('short') end
+    if w > room then return end
+
+    local dl = r.ImGui_GetWindowDrawList(ctx)
+    local _, pad_y = r.ImGui_GetStyleVar(ctx, r.ImGui_StyleVar_FramePadding())
+    local cx, ty = x + INFO_MIN_GAP + room - w, y + pad_y
+    local label_col, value_col, delta_col = Theme.get('text_gray'), Theme.get('text_white_soft'), Theme.get('green_accent')
+    for i, f in ipairs(fields) do
+        local v = f[form]
+        if i > 1 then cx = cx + INFO_FIELD_GAP end
+        r.ImGui_DrawList_AddText(dl, cx, ty, label_col, f.label)
+        cx = cx + r.ImGui_CalcTextSize(ctx, f.label) + INFO_INNER_GAP
+        r.ImGui_DrawList_AddText(dl, cx, ty, value_col, v[1])
+        cx = cx + info_cell_w(ctx, v[1])
+        if v[2] ~= '' then
+            cx = cx + INFO_INNER_GAP
+            r.ImGui_DrawList_AddText(dl, cx, ty, delta_col, v[2])
+            cx = cx + info_cell_w(ctx, v[2])
+        end
     end
 end
 
@@ -726,30 +1046,12 @@ function UIComponents.ColoredButton(ctx, label, width, color, hover_color, activ
     r.ImGui_PopStyleColor(ctx, 3)
 end
 
-function UIComponents.TextButton(ctx, text, width)
-    UIComponents.PushTransparentButtonStates(ctx, false)
-    local clicked = r.ImGui_Button(ctx, text, width)
-    local alt_clicked = is_last_item_alt_clicked(ctx)
-    r.ImGui_PopStyleColor(ctx, 3)
-    return clicked, alt_clicked
-end
-
-function UIComponents.AggregationBadge(ctx, tooltip)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), Theme.get('green_accent'))
-    UIComponents.PushTransparentButtonStates(ctx, false)
-    r.ImGui_Button(ctx, 'Δ', 18)
-    r.ImGui_PopStyleColor(ctx, 4)
-    if r.ImGui_IsItemHovered(ctx) and tooltip then
-        r.ImGui_SetTooltip(ctx, tooltip)
-    end
-end
-
-function UIComponents.StyledInputCommon(ctx, label, hint_text, value, width, bar_color, use_hint)
+function UIComponents.StyledInputCommon(ctx, label, hint_text, value, width, bar_color, use_hint, pad_x)
     bar_color = bar_color or Theme.get('gray_64')
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBg(), bar_color)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Border(), bar_color)
     r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FrameRounding(), 6)
-    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FramePadding(), 8, 4)
+    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FramePadding(), pad_x or 8, 4)
     if width then
         r.ImGui_SetNextItemWidth(ctx, width)
     end
@@ -759,74 +1061,47 @@ function UIComponents.StyledInputCommon(ctx, label, hint_text, value, width, bar
     else
         changed, new_value = r.ImGui_InputText(ctx, label, value, r.ImGui_InputTextFlags_AutoSelectAll())
     end
-    local deactivated = Utils.ClearCursorContextOnDeactivation(ctx)
+    local deactivated = Utils.ReturnFocusOnDeactivation(ctx)
     r.ImGui_PopStyleVar(ctx, 2)
     r.ImGui_PopStyleColor(ctx, 2)
     return changed, new_value, deactivated
 end
 
-function UIComponents.StyledInput(ctx, label, value, width, bar_color)
-    return UIComponents.StyledInputCommon(ctx, label, nil, value, width, bar_color, false)
+function UIComponents.StyledInput(ctx, label, value, width, bar_color, pad_x)
+    return UIComponents.StyledInputCommon(ctx, label, nil, value, width, bar_color, false, pad_x)
 end
 
-function UIComponents.MultiItemInput(ctx, label, hint_text, value, width, bar_color)
-    return UIComponents.StyledInputCommon(ctx, label, hint_text, value, width, bar_color, true)
+function UIComponents.MultiItemInput(ctx, label, hint_text, value, width, bar_color, pad_x)
+    return UIComponents.StyledInputCommon(ctx, label, hint_text, value, width, bar_color, true, pad_x)
 end
 
-function UIComponents.PureColorBar(ctx, width, bar_color)
-    local w_avail, _ = r.ImGui_GetContentRegionAvail(ctx)
-    local w = width or w_avail
-    local h = 23
-    r.ImGui_Dummy(ctx, w, h)
-    local dl = r.ImGui_GetWindowDrawList(ctx)
-    local x1, y1 = r.ImGui_GetItemRectMin(ctx)
-    local x2, y2 = r.ImGui_GetItemRectMax(ctx)
-    r.ImGui_DrawList_AddRectFilled(dl, x1, y1, x2, y2, bar_color, 6)
-end
-
-function UIComponents.StyledCombo(ctx, label, current_index, items_str, width, bar_color, items_count)
-    bar_color = bar_color or Theme.get('gray_64')
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBg(), bar_color)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Border(), bar_color)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_PopupBg(), Theme.get('gray_30'))
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Header(), Theme.get('gray_58'))
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_HeaderHovered(), Theme.get('gray_64'))
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_HeaderActive(), Theme.get('gray_74'))
-    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FrameRounding(), 6)
-    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FramePadding(), 8, 4)
-    if width then
-        r.ImGui_SetNextItemWidth(ctx, width)
+-- Vol/Vel numeric box, styled like the pitch box: neutral text, reports per-frame horizontal mouse movement.
+-- id must start with '##' so the item keeps its identity while the text changes.
+-- disabled: dimmed and inert (Mixed selection); returns is_hovered only.
+-- The value changes while it is dragged, so the ID must not depend on it: ImGui hashes the whole label for
+-- "text##id" and only the part after "###" for "text###id". A changing ID would end the drag after one step.
+function UIComponents.LevelBox(ctx, id, text, width, disabled)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), Theme.get('gray_42'))
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), Theme.get('gray_58'))
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), Theme.get('gray_74'))
+    if disabled then r.ImGui_BeginDisabled(ctx, true) end
+    r.ImGui_Button(ctx, text .. (id:sub(1, 3) == '###' and id or ('#' .. id)), width)
+    if disabled then r.ImGui_EndDisabled(ctx) end
+    r.ImGui_PopStyleColor(ctx, 3)
+    if disabled then
+        return r.ImGui_IsItemHovered(ctx, r.ImGui_HoveredFlags_AllowWhenDisabled())
     end
-    local changed, new_index
-    if items_count then
-        changed, new_index = r.ImGui_Combo(ctx, label, current_index, items_str, items_count)
-    else
-        changed, new_index = r.ImGui_Combo(ctx, label, current_index, items_str)
-    end
-    r.ImGui_PopStyleVar(ctx, 2)
-    r.ImGui_PopStyleColor(ctx, 6)
-    return changed, new_index
-end
 
-function UIComponents.StyledSlider(ctx, label, value, min_val, max_val, format, bar_color)
-    bar_color = bar_color or Theme.get('green_accent')
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_SliderGrab(), bar_color)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_SliderGrabActive(), bar_color)
-    local changed, new_value = r.ImGui_SliderDouble(ctx, label, value, min_val, max_val, format)
+    local activated = r.ImGui_IsItemActivated(ctx)
+    local active = r.ImGui_IsItemActive(ctx)
+    local deactivated = Utils.ReturnFocusOnDeactivation(ctx)
     local alt_clicked = is_last_item_alt_clicked(ctx)
     local dbl_clicked = r.ImGui_IsItemHovered(ctx) and r.ImGui_IsMouseDoubleClicked(ctx, 0)
-    local deactivated = Utils.ClearCursorContextOnDeactivation(ctx)
-    r.ImGui_PopStyleColor(ctx, 2)
-    return changed, new_value, deactivated, alt_clicked, dbl_clicked
-end
-
-function UIComponents.DragDoubleInput(ctx, id, value, width, speed, min_val, max_val, format)
-    if width then
-        r.ImGui_SetNextItemWidth(ctx, width)
+    local dx = 0
+    if active then
+        dx = r.ImGui_GetMouseDelta(ctx)
     end
-    local changed, new_value = r.ImGui_DragDouble(ctx, id, value, speed or 0.1, min_val or -999, max_val or 999, format or "%.0f")
-    local deactivated = Utils.ClearCursorContextOnDeactivation(ctx)
-    return changed, new_value, deactivated
+    return activated, active, deactivated, dx, alt_clicked, dbl_clicked
 end
 
 local _freqbox_drag_state = {}
@@ -854,7 +1129,7 @@ function UIComponents.FreqBox(ctx, id, norm, width, color, inverted, display_fn,
     local new_norm = norm
     local activated = r.ImGui_IsItemActivated(ctx)
     local active = r.ImGui_IsItemActive(ctx)
-    local deactivated = Utils.ClearCursorContextOnDeactivation(ctx)
+    local deactivated = Utils.ReturnFocusOnDeactivation(ctx)
     local alt_clicked = is_last_item_alt_clicked(ctx)
 
     if reset_norm ~= nil and activated then
@@ -895,66 +1170,6 @@ function UIComponents.FreqBox(ctx, id, norm, width, color, inverted, display_fn,
     end
     UIComponents.DrawHoverActiveOverlay(ctx)
     return changed, new_norm, activated, deactivated, alt_clicked
-end
-
--- FreqBoxHz: works with Hz directly, logarithmic drag behavior
-function UIComponents.FreqBoxHz(ctx, id, freq_hz, width, color, inverted, display_fn, reset_freq_hz)
-    local box_h = 18
-    r.ImGui_InvisibleButton(ctx, id, width, box_h)
-    local x1, y1 = r.ImGui_GetItemRectMin(ctx)
-    local x2, y2 = r.ImGui_GetItemRectMax(ctx)
-    local dl = r.ImGui_GetWindowDrawList(ctx)
-    local bg = Theme.get('gray_42')
-    local border = Theme.get('gray_74')
-    r.ImGui_DrawList_AddRectFilled(dl, x1, y1, x2, y2, bg, 4)
-    r.ImGui_DrawList_AddRect(dl, x1, y1, x2, y2, border, 4, 0, 1.0)
-    local display_str = display_fn(freq_hz)
-    local tw, th = r.ImGui_CalcTextSize(ctx, display_str)
-    local pad = 4
-    local ty = y1 + (box_h - th) * 0.5
-    r.ImGui_DrawList_AddText(dl, x1 + pad, ty, color, display_str)
-
-    local changed = false
-    local new_freq = freq_hz
-    local activated = r.ImGui_IsItemActivated(ctx)
-    local active = r.ImGui_IsItemActive(ctx)
-    local deactivated = Utils.ClearCursorContextOnDeactivation(ctx)
-
-    if reset_freq_hz ~= nil and activated then
-        local now = r.time_precise()
-        local last = _freqbox_last_activated[id]
-        if last and (now - last) <= FREQBOX_DOUBLE_CLICK_SEC then
-            new_freq = reset_freq_hz
-            changed = true
-            _freqbox_last_activated[id] = nil
-        else
-            _freqbox_last_activated[id] = now
-        end
-    end
-
-    if activated and not changed then
-        _freqbox_drag_state[id] = { start = freq_hz }
-    end
-    if active and _freqbox_drag_state[id] and not changed then
-        local state = _freqbox_drag_state[id]
-        local dx = r.ImGui_GetMouseDragDelta(ctx, 0)
-        if dx and type(dx) == "number" then
-            -- Logarithmic drag: multiply by exp(dx * factor)
-            local factor = 0.005 -- base sensitivity
-            local shift = (r.ImGui_GetKeyMods(ctx) & r.ImGui_Mod_Shift()) ~= 0
-            if shift then factor = factor * 0.1 end
-            local delta_factor = dx * factor
-            if inverted then delta_factor = -delta_factor end
-            new_freq = state.start * math.exp(delta_factor)
-            new_freq = math.max(20, math.min(20000, new_freq))
-            if new_freq ~= freq_hz then changed = true end
-        end
-    end
-    if deactivated then
-        _freqbox_drag_state[id] = nil
-    end
-    UIComponents.DrawHoverActiveOverlay(ctx)
-    return changed, new_freq
 end
 
 function UIComponents.ApplyWindowStyle(ctx)
@@ -1003,131 +1218,28 @@ function UIComponents.StyledCheckbox(ctx, label, value, is_mixed, disabled)
     return changed, new_value
 end
 
-function UIComponents.IconToggle(ctx, id, icons, state, is_mixed, size)
+-- Tri-state toggle: colored square with a glyph (on / mixed / off colors from Theme toggle_*).
+-- Returns changed, new_state; clicking a mixed toggle turns it on.
+function UIComponents.GlyphToggle(ctx, id, cp, on_color, state, is_mixed, size)
     size = size or 20
     local mixed = (state == nil and is_mixed)
     local current = mixed and false or (state or false)
-    local icon = nil
-    if icons then
-        icon = mixed and icons.mixed or (current and icons.on or icons.off)
+    local clicked = r.ImGui_InvisibleButton(ctx, id, size, size)
+    local x1, y1 = r.ImGui_GetItemRectMin(ctx)
+    local dl = r.ImGui_GetWindowDrawList(ctx)
+    local bg = mixed and Theme.get('toggle_mixed') or (current and on_color or Theme.get('toggle_off'))
+    r.ImGui_DrawList_AddRectFilled(dl, x1, y1, x1 + size, y1 + size, bg, 3)
+    if r.ImGui_IsItemActive(ctx) then
+        r.ImGui_DrawList_AddRectFilled(dl, x1, y1, x1 + size, y1 + size, Theme.get('active_white_64'), 3)
+    elseif r.ImGui_IsItemHovered(ctx) then
+        r.ImGui_DrawList_AddRectFilled(dl, x1, y1, x1 + size, y1 + size, Theme.get('hover_white_32'), 3)
     end
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), Theme.get('transparent'))
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), Theme.get('hover_white_32'))
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), Theme.get('active_white_64'))
-    if id then r.ImGui_PushID(ctx, id) end
-    local clicked = false
-    if icon then
-        clicked = r.ImGui_ImageButton(ctx, '##img_toggle', icon, size, size, 0, 0, 1, 1, nil, Theme.get('text_white_soft'))
-        UIComponents.DrawHoverActiveOverlay(ctx)
-    else
-        clicked = r.ImGui_Button(ctx, current and 'On' or 'Off', size)
-    end
-    if id then r.ImGui_PopID(ctx) end
-    r.ImGui_PopStyleColor(ctx, 3)
+    local fg = (mixed or current) and Theme.get('black') or Theme.get('toggle_off_symbol')
+    UIComponents.DrawGlyphCentered(ctx, x1, y1, size, size, cp, 13, fg)
     if clicked then
-        if mixed then
-            return true, true
-        else
-            return true, not current
-        end
+        return true, mixed and true or not current
     end
     return false, mixed and nil or current
-end
-
-function UIComponents.IconToggleDual(ctx, id, icon_on, icon_off, state, size)
-    return UIComponents.IconToggle(ctx, id, { on = icon_on, off = icon_off }, state, false, size)
-end
-
-function UIComponents.IconToggleTri(ctx, id, icon_on, icon_off, icon_mixed, state, is_mixed, size)
-    return UIComponents.IconToggle(ctx, id, { on = icon_on, off = icon_off, mixed = icon_mixed }, state, is_mixed, size)
-end
-
-function UIComponents.ParameterControl(ctx, label, value, width, speed, min_val, max_val, format, reset_action, label_width, has_different_values, is_modified)
-    if is_modified == nil then
-        is_modified = (value ~= 0)
-    end
-    UIComponents.StyledResetButton(ctx, label, label_width or 40, is_modified, reset_action)
-    r.ImGui_SameLine(ctx, 0, 2)
-    local changed, new_value, deactivated = UIComponents.DragDoubleInput(ctx, '##' .. label, value, width or 50, speed, min_val, max_val, format)
-    return changed, new_value, deactivated
-end
-
-local _knob_drag_state = {}
-
-function UIComponents.Knob(ctx, id, value, min_val, max_val, default_value, radius, active)
-    radius = radius or 9
-    local size = radius * 2 + 4
-    if id then r.ImGui_PushID(ctx, id) end
-    r.ImGui_InvisibleButton(ctx, '##knob', size, size)
-    if id then r.ImGui_PopID(ctx) end
-
-    local x1, y1 = r.ImGui_GetItemRectMin(ctx)
-    local x2, y2 = r.ImGui_GetItemRectMax(ctx)
-    local cx = (x1 + x2) * 0.5
-    local cy = (y1 + y2) * 0.5
-    local dl = r.ImGui_GetWindowDrawList(ctx)
-
-    local bg = Theme.get('gray_42')
-    local border = Theme.get('gray_74')
-    local accent = (active == false) and Theme.get('pipe_gray') or Theme.get('green_accent')
-
-    r.ImGui_DrawList_AddCircleFilled(dl, cx, cy, radius, bg, 32)
-    r.ImGui_DrawList_AddCircle(dl, cx, cy, radius, border, 32, 1.0)
-    r.ImGui_DrawList_AddCircleFilled(dl, cx, cy, 2.0, Theme.get('black'), 16)
-
-    local range = max_val - min_val
-    if range <= 0 then range = 1 end
-    local t = (value - min_val) / range
-    if t < 0 then t = 0 elseif t > 1 then t = 1 end
-    local angle_start = -math.pi * 1.25
-    local angle_end = math.pi * 0.25
-    local angle = angle_start + t * (angle_end - angle_start)
-    local r_inner = radius * 0.65
-    local x_end = cx + math.cos(angle) * r_inner
-    local y_end = cy + math.sin(angle) * r_inner
-    r.ImGui_DrawList_AddLine(dl, cx, cy, x_end, y_end, accent, 2.0)
-
-    local id_key = id or 'knob'
-    local changed = false
-    local new_value = value
-    local reset = false
-
-    local active = r.ImGui_IsItemActive(ctx)
-    if active then
-        local state = _knob_drag_state[id_key]
-        if not state then
-            _knob_drag_state[id_key] = { start = value }
-            state = _knob_drag_state[id_key]
-        end
-        local _, dy = r.ImGui_GetMouseDragDelta(ctx, 0)
-        local speed = range / 200.0
-        local shift = (r.ImGui_GetKeyMods(ctx) & r.ImGui_Mod_Shift()) ~= 0
-        if shift then speed = speed * 0.05 end
-        local v = state.start + (-dy) * speed
-        if shift then
-            v = math.floor(v + 0.5)
-        end
-        if v < min_val then v = min_val end
-        if v > max_val then v = max_val end
-        if v ~= new_value then
-            new_value = v
-            changed = true
-        end
-    end
-
-    local hovered = r.ImGui_IsItemHovered(ctx)
-    if hovered and r.ImGui_IsMouseDoubleClicked(ctx, 0) and default_value ~= nil then
-        new_value = default_value
-        changed = true
-        reset = true
-    end
-
-    local deactivated = Utils.ClearCursorContextOnDeactivation(ctx)
-    if deactivated then
-        _knob_drag_state[id_key] = nil
-    end
-
-    return changed, new_value, deactivated, reset
 end
 
 local _pitch_drag_state = {}
@@ -1170,16 +1282,23 @@ function UIComponents.DisplayToRateValue(display)
     return v
 end
 
+-- Up to 6 decimals of the rate (3 in the x1000 display below 1), trailing zeros dropped.
+-- Boxes shorten long values in the middle (FitTextMiddle), so nothing is rounded away.
 function UIComponents.FormatRateDisplayValue(rate)
     local display = UIComponents.RateToDisplayValue(rate)
-    local rounded_int = round_to_nearest(display)
-    if math.abs(display - rounded_int) < 0.0005 then
-        return string.format('%.0f', rounded_int)
+    local text = string.format(display < 0 and '%.3f' or '%.6f', display)
+    return (text:gsub('0+$', ''):gsub('%.$', ''))
+end
+
+-- Shortens text in the middle ("1.05…3") so its start and end both stay visible within max_w.
+function UIComponents.FitTextMiddle(ctx, text, max_w)
+    if r.ImGui_CalcTextSize(ctx, text) <= max_w then return text end
+    local suffix = text:sub(-1)
+    for n = #text - 2, 1, -1 do
+        local candidate = text:sub(1, n) .. '…' .. suffix
+        if r.ImGui_CalcTextSize(ctx, candidate) <= max_w then return candidate end
     end
-    if display < 0 then
-        return string.format('%.1f', display)
-    end
-    return string.format('%.3f', display)
+    return text:sub(1, 1) .. '…' .. suffix
 end
 
 function UIComponents.ParseRateInput(text, min_rate, max_rate)
@@ -1362,7 +1481,7 @@ function UIComponents.VerticalPitchControl(ctx, label, value, width, speed, min_
         local ok = pcall(r.ImGui_ResetMouseDragDelta, ctx, 0)
         local hovered = r.ImGui_IsWindowHovered(ctx)
         if not hovered then
-            Utils.DeferClearCursorContext()
+            Utils.DeferReturnFocus()
         end
         deactivated = true
     elseif item_deactivated and not mouse_down then
@@ -1470,7 +1589,7 @@ function UIComponents.ContinuousValueControl(ctx, label, value, width, speed, mi
         pcall(r.ImGui_ResetMouseDragDelta, ctx, 0)
         local hovered_window = r.ImGui_IsWindowHovered(ctx)
         if not hovered_window then
-            Utils.DeferClearCursorContext()
+            Utils.DeferReturnFocus()
         end
         deactivated = true
     elseif item_deactivated and not mouse_down then
@@ -1511,7 +1630,9 @@ function UIComponents.RateControl(ctx, label, value, width, speed, min_val, max_
     end
     if agg_count and agg_count > 1 then UIComponents.ExtendAggHoverRegion(ctx) end
     r.ImGui_SameLine(ctx, 0, 2)
-    local w = width or 70
+    local w = width or UIComponents.VALUE_BOX_W
+    local pad_x = r.ImGui_GetStyleVar(ctx, r.ImGui_StyleVar_FramePadding())
+    text = UIComponents.FitTextMiddle(ctx, text, w - pad_x * 2 - r.ImGui_CalcTextSize(ctx, ' '))
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), Theme.get('gray_42'))
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), Theme.get('gray_58'))
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), Theme.get('gray_74'))
@@ -1577,7 +1698,7 @@ function UIComponents.RateControl(ctx, label, value, width, speed, min_val, max_
         pcall(r.ImGui_ResetMouseDragDelta, ctx, 0)
         local hovered_window = r.ImGui_IsWindowHovered(ctx)
         if not hovered_window then
-            Utils.DeferClearCursorContext()
+            Utils.DeferReturnFocus()
         end
         deactivated = true
     elseif item_deactivated and not mouse_down then
@@ -1692,7 +1813,7 @@ function UIComponents.ItemPitchControl(ctx, label, value, width, min_val, max_va
         pcall(r.ImGui_ResetMouseDragDelta, ctx, 0)
         local hovered_window = r.ImGui_IsWindowHovered(ctx)
         if not hovered_window then
-            Utils.DeferClearCursorContext()
+            Utils.DeferReturnFocus()
         end
         deactivated = true
     elseif item_deactivated and not mouse_down then
@@ -1714,9 +1835,8 @@ function UIComponents.ItemPitchControl(ctx, label, value, width, min_val, max_va
     return changed, new_value, deactivated, activated
 end
 
-
-function UIComponents.RenderInfoButton(ctx, command_id)
-    UIComponents.StyledButton(ctx, 'i', 18, function()
+function UIComponents.RenderInfoButton(ctx, command_id, width)
+    UIComponents.StyledButton(ctx, 'i', width or 18, function()
         local mods = r.ImGui_GetKeyMods(ctx)
         local alt_pressed = (mods & r.ImGui_Mod_Alt()) ~= 0
         local shift_pressed = (mods & r.ImGui_Mod_Shift()) ~= 0
@@ -1755,7 +1875,7 @@ function UIComponents.RenderInfoButton(ctx, command_id)
     UIComponents.QueueStyledTooltipDelayed(ctx, 'frenkie_info_btn_' .. tostring(command_id), tip_lines, STYLED_TOOLTIP_DELAY_DEFAULT)
 end
 
-function UIComponents.RenderTrackInstrumentButton(ctx, icon, track, has_instrument, is_open, on_click)
+function UIComponents.RenderTrackInstrumentButton(ctx, track, has_instrument, is_open, on_click)
     local tint = Theme.get('text_white_soft')
     if not has_instrument then
         tint = Theme.get('text_gray')
@@ -1783,7 +1903,7 @@ function UIComponents.RenderTrackInstrumentButton(ctx, icon, track, has_instrume
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), button_colors.active)
     local clicked = r.ImGui_Button(ctx, '##track_instrument', 24)
     r.ImGui_PopStyleColor(ctx, 3)
-    UIComponents.DrawImageCenteredInLastItem(ctx, icon, tint, 3)
+    UIComponents.DrawGlyphInLastItem(ctx, UIComponents.GLYPH.instrument, 15, tint)
 
     if clicked and has_instrument and track ~= nil and on_click then
         on_click()
@@ -1859,6 +1979,119 @@ function UIComponents.DrawAggregationOutline(ctx, color, rounding, inset)
     local pad = inset or 0
     local thickness = 1.0
     r.ImGui_DrawList_AddRect(dl, x1 + pad, y1 + pad, x2 - pad, y2 - pad, col, rads, 0, thickness)
+end
+
+local _ltp_drag_state = {}
+
+-- Fixed width so the docked widget never grows.
+local LTP_BOX_W = 224
+
+function UIComponents.GetLastTouchedParamTooltipLines()
+    return {
+        'Last Touched Parameter',
+        'Drag — Change Value',
+        shift_label() .. '+Drag — Fine',
+        'Double-Click — Default Value',
+        cmd_label() .. '+Click — Show Envelope',
+    }
+end
+
+function UIComponents.GetLastTouchedParamEmptyTooltipLines()
+    return { 'No parameter touched on this track yet' }
+end
+
+--- Last Touched Parameter box: "FX · Param" on the left, value on the right.
+--- Drag vertically to change the value (Shift = fine), double-click = default, Cmd/Ctrl+click = envelope.
+function UIComponents.RenderLastTouchedParamBox(ctx, info, font, on_value_change, on_value_end, on_automate)
+    local has = info ~= nil
+    r.ImGui_PushID(ctx, 'fip_ltp_box')
+    local h = r.ImGui_GetFrameHeight(ctx)
+    r.ImGui_InvisibleButton(ctx, '##ltp', LTP_BOX_W, h)
+    local x1, y1 = r.ImGui_GetItemRectMin(ctx)
+    local x2, y2 = r.ImGui_GetItemRectMax(ctx)
+    local active = has and r.ImGui_IsItemActive(ctx)
+    local hovered = has and r.ImGui_IsItemHovered(ctx)
+    local dl = r.ImGui_GetWindowDrawList(ctx)
+    local bg = active and Theme.get('gray_74') or (hovered and Theme.get('gray_58') or Theme.get('gray_42'))
+    r.ImGui_DrawList_AddRectFilled(dl, x1, y1, x2, y2, bg, 4)
+
+    local pad = 8
+    local value = has and (info.formatted or '') or ''
+    local vw = (value ~= '') and r.ImGui_CalcTextSize(ctx, value) or 0
+    local name = has and ((info.fx_name or '') .. ' · ' .. (info.param_name or '')) or 'No parameter'
+    local _, th = r.ImGui_CalcTextSize(ctx, name)
+    local ty = y1 + (h - th) * 0.5
+    r.ImGui_DrawList_PushClipRect(dl, x1 + pad, y1, x2 - pad - (vw > 0 and vw + 8 or 0), y2, true)
+    r.ImGui_DrawList_AddText(dl, x1 + pad, ty, has and Theme.get('text_white_soft') or Theme.get('text_gray'), name)
+    r.ImGui_DrawList_PopClipRect(dl)
+    if vw > 0 then
+        r.ImGui_DrawList_PushClipRect(dl, x1 + pad, y1, x2 - pad, y2, true)
+        r.ImGui_DrawList_AddText(dl, x2 - pad - vw, ty, Theme.get('text_white_soft'), value)
+        r.ImGui_DrawList_PopClipRect(dl)
+    end
+
+    if has then
+        local id_key = 'ltp_val'
+        local mods = r.ImGui_GetKeyMods(ctx)
+        local cmd_held = (mods & r.ImGui_Mod_Super()) ~= 0 or (mods & r.ImGui_Mod_Ctrl()) ~= 0
+        if r.ImGui_IsItemActivated(ctx) then
+            _ltp_drag_state.automate_click = cmd_held
+            if cmd_held and on_automate then on_automate() end
+        end
+
+        local changed = false
+        local new_value = info.value or 0
+        local min_val = info.min_val or 0
+        local max_val = info.max_val or 1
+        local range = max_val - min_val
+        if range <= 0 then range = 1 end
+
+        if active and not _ltp_drag_state.automate_click then
+            local state = _ltp_drag_state[id_key]
+            if not state then
+                _ltp_drag_state[id_key] = { start = new_value }
+                state = _ltp_drag_state[id_key]
+            end
+            local _, dy = r.ImGui_GetMouseDragDelta(ctx, 0)
+            local speed = range / 200.0
+            local shift = (mods & r.ImGui_Mod_Shift()) ~= 0
+            if shift then speed = speed * 0.05 end
+            local v = state.start + (-dy) * speed
+            if v < min_val then v = min_val end
+            if v > max_val then v = max_val end
+            if v ~= new_value then
+                new_value = v
+                changed = true
+            end
+        end
+
+        if hovered and r.ImGui_IsMouseDoubleClicked(ctx, 0) and info.default_value ~= nil then
+            new_value = info.default_value
+            changed = true
+        end
+
+        if changed and on_value_change then
+            _ltp_drag_state._dirty = true
+            on_value_change(new_value)
+        end
+
+        local deactivated = Utils.ReturnFocusOnDeactivation(ctx)
+        if deactivated then
+            _ltp_drag_state[id_key] = nil
+            _ltp_drag_state.automate_click = false
+            if _ltp_drag_state._dirty then
+                _ltp_drag_state._dirty = false
+                if on_value_end then on_value_end() end
+            end
+        end
+        UIComponents.QueueStyledTooltipDelayed(ctx, 'fip_ltp_box_tt',
+            UIComponents.GetLastTouchedParamTooltipLines(), STYLED_TOOLTIP_DELAY_DEFAULT)
+    else
+        UIComponents.QueueStyledTooltipDelayed(ctx, 'fip_ltp_box_tt',
+            UIComponents.GetLastTouchedParamEmptyTooltipLines(), STYLED_TOOLTIP_DELAY_DEFAULT)
+    end
+
+    r.ImGui_PopID(ctx)
 end
 
 return UIComponents

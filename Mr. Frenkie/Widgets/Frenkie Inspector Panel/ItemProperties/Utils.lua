@@ -1,5 +1,4 @@
 -- @noindex
-
 ---@diagnostic disable: undefined-global, undefined-field
 local r = reaper
 local Utils = {}
@@ -7,12 +6,14 @@ local Utils = {}
 local script_path = debug.getinfo(1, "S").source:match("@(.*)")
 local script_dir = script_path:match("(.*[\\/])") or ""
 
-function Utils.vol_to_db(vol)
-    return vol <= 0 and -math.huge or 20 * math.log(vol, 10)
-end
-
-function Utils.db_to_vol(db)
-    return 10^(db/20)
+-- Parses the extension's tab-separated key=value state strings into a table.
+function Utils.ParseKeyValues(raw)
+    local t = {}
+    for pair in (raw or ''):gmatch('[^\t]+') do
+        local k, v = pair:match('^(.-)=(.*)$')
+        if k then t[k] = v end
+    end
+    return t
 end
 
 function Utils.with_undo(description, func)
@@ -21,31 +22,23 @@ function Utils.with_undo(description, func)
     r.Undo_EndBlock(description, -1)
 end
 
-function Utils.shallow_equal(t1, t2)
-    if #t1 ~= #t2 then return false end
-    for k, v in pairs(t1) do
-        if v ~= t2[k] then return false end
-    end
-    return true
+-- After a drag in the widget ended outside it: the keyboard focus back to REAPER, in the context it had
+-- (FIP_ContextReturnFocus), on the next tick.
+function Utils.DeferReturnFocus()
+    r.defer(function()
+        if r.APIExists('FIP_ContextReturnFocus') then r.FIP_ContextReturnFocus('', 0) end
+    end)
 end
 
-function Utils.DeferClearCursorContext()
-    r.defer(function() r.SetCursorContext(0, nil) end)
-end
-
-function Utils.ClearCursorContextOnDeactivation(ctx)
+function Utils.ReturnFocusOnDeactivation(ctx)
     local deactivated = r.ImGui_IsItemDeactivated(ctx)
     if deactivated then
         local hovered = r.ImGui_IsWindowHovered(ctx)
         if not hovered then
-            Utils.DeferClearCursorContext()
+            Utils.DeferReturnFocus()
         end
     end
     return deactivated
-end
-
-function Utils.GetScriptDir()
-    return script_dir
 end
 
 return Utils

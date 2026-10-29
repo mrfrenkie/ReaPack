@@ -1,5 +1,4 @@
 -- @noindex
-
 ---@diagnostic disable: undefined-global, undefined-field
 local r = reaper
 
@@ -7,7 +6,6 @@ local script_path = debug.getinfo(1, "S").source:match("@(.*)")
 local script_dir = script_path:match("(.*[\\/])") or ""
 
 package.path = script_dir .. "?.lua;" .. script_dir .. "?/init.lua;" .. package.path
-local Core = require("Core")
 local Theme = require("Theme")
 
 local Take = {}
@@ -62,8 +60,8 @@ function Take.Render(ctx, items, props, UI, bar_color)
         if can_edit_takes and type(take_count) == "number" and take_count > 0 and type(active_index) == "number" and active_index >= 0 then
             local take_count_i = math.floor(take_count)
             local active_index_i = math.floor(active_index)
-            local state = Core.GetState()
-            local sig = state.cached_items_sig or ""
+            local sig = (r.APIExists and r.APIExists("FIP_GetSelectedItemsSignatureStr"))
+                and (r.FIP_GetSelectedItemsSignatureStr("", 0) or "") or ""
             local cache_key = sig .. ":" .. tostring(take_count_i)
             local cache = Take._take_menu_cache
             if cache.key ~= cache_key then
@@ -121,9 +119,6 @@ function Take.Render(ctx, items, props, UI, bar_color)
                     local label = display_name .. "##Take_" .. i
                     if r.ImGui_Selectable(ctx, label, sel) then
                         r.FIP_ApplySingleSelectedItemActiveTakeIndexVal(tostring(i), 0)
-                        local state = Core.GetState()
-                        state.cached_props = Core.GetAggregatedProps(items)
-                        Core.SetState(state)
                     end
                 end
                 r.ImGui_PopStyleColor(ctx, 4)
@@ -189,9 +184,6 @@ function Take.Render(ctx, items, props, UI, bar_color)
             if (prev_clicked and not prev_disabled) or (next_clicked and not next_disabled) then
                 local delta = prev_clicked and -1 or 1
                 r.FIP_ApplyShiftSingleSelectedItemActiveTakeVal(tostring(delta), 0)
-                local state = Core.GetState()
-                state.cached_props = Core.GetAggregatedProps(items)
-                Core.SetState(state)
             end
         end
     else

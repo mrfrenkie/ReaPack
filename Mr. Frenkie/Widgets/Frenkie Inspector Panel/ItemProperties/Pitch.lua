@@ -1,5 +1,4 @@
 -- @noindex
-
 ---@diagnostic disable: undefined-global, undefined-field
 local r = reaper
 
@@ -8,10 +7,6 @@ local script_dir = script_path:match("(.*[\\/])") or ""
 
 package.path = script_dir .. "?.lua;" .. script_dir .. "?/init.lua;" .. package.path
 local Utils = require("Utils")
-
-local transpose_drag_active = false
-local transpose_drag_start = 0
-local transpose_drag_last = 0
 
 local ItemPropsPitch = {}
 ItemPropsPitch._sel_tracks_pitch_cache = ItemPropsPitch._sel_tracks_pitch_cache or { sig = "", proj_cc = -1, stats = nil }
@@ -120,139 +115,12 @@ function ItemPropsPitch.HandleSelectedTracksItemsPitchChange(new_pitch, current_
     return (type(updated) == "number") and updated or ((current_pitch or 0) + delta)
 end
 
-function ItemPropsPitch.GetPitch(take)
-    if not take then return 0 end
-    return r.GetMediaItemTakeInfo_Value(take, "D_PITCH")
-end
-
-function ItemPropsPitch.SetPitch(take, pitch)
-    if not take or pitch == nil then return end
-    r.SetMediaItemTakeInfo_Value(take, "D_PITCH", pitch)
-end
-
-function ItemPropsPitch.UpdateAccumulatedPitch(pitch_delta)
-    if not (r.APIExists and r.APIExists("FIP_ApplyAddSelectedItemsPitchDeltaVal")) then
-        r.ShowConsoleMsg("ERROR: FIP_ApplyAddSelectedItemsPitchDeltaVal not available\n")
-        return 0
-    end
-    return r.FIP_ApplyAddSelectedItemsPitchDeltaVal(tostring(pitch_delta or 0), 0) or 0
-end
-
-function ItemPropsPitch.ResetAccumulatedPitch()
-    if r.APIExists and r.APIExists("FIP_ResetSelectedItemsPitchDeltaVal") then
-        r.FIP_ResetSelectedItemsPitchDeltaVal("", 0)
-    end
-end
-
-function ItemPropsPitch.GetAccumulatedPitch()
-    if r.APIExists and r.APIExists("FIP_GetSelectedItemsPitchDeltaVal") then
-        return r.FIP_GetSelectedItemsPitchDeltaVal("", 0) or 0
-    end
-    return 0
-end
-
-function ItemPropsPitch.CheckSelectionChange(items)
-    if r.APIExists and r.APIExists("FIP_GetSelectedItemsSignatureStr") then
-        local sig = r.FIP_GetSelectedItemsSignatureStr("", 0) or ""
-        if ItemPropsPitch._last_items_sig ~= sig then
-            ItemPropsPitch._last_items_sig = sig
-            return true
-        end
-    end
-    return false
-end
-
-function ItemPropsPitch.ResetPitch(items)
-    Utils.with_undo("Reset Pitch", function()
-        if r.APIExists and r.APIExists("FIP_SetSelectedItemsPitch") then
-            r.FIP_SetSelectedItemsPitch("0", 0)
-        else
-            r.ShowConsoleMsg("ERROR: FIP_SetSelectedItemsPitch not available\n")
-        end
-    end)
-    r.UpdateArrange()
-end
-
-function ItemPropsPitch.UpdatePitch(items, pitch_delta, base_values)
-    if not items or #items == 0 then return end
-    if r.APIExists and r.APIExists("FIP_AddSelectedItemsPitch") then
-        r.FIP_AddSelectedItemsPitch(tostring(pitch_delta or 0), 0)
-    else
-        r.ShowConsoleMsg("ERROR: FIP_AddSelectedItemsPitch not available\n")
-    end
-    r.UpdateArrange()
-end
-
-function ItemPropsPitch.SetAbsolutePitch(items, pitch)
-    if not items or #items == 0 then return end
-    local clamped_pitch = math.max(-96, math.min(96, pitch or 0))
-    if r.APIExists and r.APIExists("FIP_SetSelectedItemsPitch") then
-        r.FIP_SetSelectedItemsPitch(tostring(clamped_pitch), 0)
-    else
-        r.ShowConsoleMsg("ERROR: FIP_SetSelectedItemsPitch not available\n")
-    end
-    r.UpdateArrange()
-end
-
-function ItemPropsPitch.HandlePitchChange(items, new_pitch, current_pitch, base_values)
-    if not items or #items == 0 then return current_pitch or 0 end
-    new_pitch = math.floor(new_pitch + 0.5)
-    new_pitch = math.max(-96, math.min(96, new_pitch))
-    local desired_delta = new_pitch - (current_pitch or 0)
-    if desired_delta == 0 then return current_pitch or 0 end
-    if #items > 1 then
-        local updated = ItemPropsPitch.UpdateAccumulatedPitch(desired_delta)
-        return (type(updated) == "number") and updated or ((current_pitch or 0) + desired_delta)
-    end
-    if r.APIExists and r.APIExists("FIP_SetSelectedItemsPitch") then
-        r.FIP_SetSelectedItemsPitch(tostring(new_pitch), 0)
-    else
-        r.ShowConsoleMsg("ERROR: FIP_SetSelectedItemsPitch not available\n")
-    end
-    return new_pitch
-end
-
 function ItemPropsPitch.FinalizePitchChange()
     Utils.with_undo("Change Pitch", function() end)
 end
 
-local function TransposeMIDIItems(items, interval)
-    if not items or #items == 0 or interval == 0 then return end
-    if r.APIExists("FIP_TransposeSelectedItemsMIDI") then
-        r.FIP_TransposeSelectedItemsMIDI(interval, 0)
-    else
-        r.ShowConsoleMsg("ERROR: FIP_TransposeSelectedItemsMIDI not available\n")
-    end
-    r.UpdateArrange()
-end
-
-function ItemPropsPitch.MIDITransposeDragUpdate(items, new_pitch, current_pitch)
-    new_pitch = math.floor(new_pitch + 0.5)
-    current_pitch = math.floor((current_pitch or 0) + 0.5)
-    
-    if not transpose_drag_active then
-        transpose_drag_active = true
-        transpose_drag_start = current_pitch
-        transpose_drag_last = current_pitch
-    end
-    
-    local delta = new_pitch - transpose_drag_last
-    if delta ~= 0 then
-        TransposeMIDIItems(items, delta)
-        transpose_drag_last = new_pitch
-    end
-end
-
+-- The drag applied the delta frame by frame without undo; this commits one named point on release.
 function ItemPropsPitch.FinalizeMIDITranspose(items)
-    if not transpose_drag_active then return end
-    
-    -- Delta has been applied incrementally.
-    -- We just clean up and register Undo.
-    
-    transpose_drag_active = false
-    transpose_drag_start = 0
-    transpose_drag_last = 0
-    
     Utils.with_undo("Transpose MIDI", function()
         -- Just to register state change
         if r.APIExists("FIP_ResetSelectedItemsPitchDeltaVal") then
@@ -260,54 +128,6 @@ function ItemPropsPitch.FinalizeMIDITranspose(items)
         end
         r.UpdateArrange()
     end)
-end
-
-function ItemPropsPitch.HandlePitchReset(items, base_values)
-    Utils.with_undo("Reset Pitch", function()
-        if r.APIExists and r.APIExists("FIP_SetSelectedItemsPitch") then
-            r.FIP_SetSelectedItemsPitch("0", 0)
-        else
-            r.ShowConsoleMsg("ERROR: FIP_SetSelectedItemsPitch not available\n")
-        end
-    end)
-    ItemPropsPitch.ResetAccumulatedPitch()
-    if base_values then
-        for i, item in ipairs(items) do
-            local take = r.GetActiveTake(item)
-            if take and base_values[i] then
-                base_values[i].pitch = ItemPropsPitch.GetPitch(take)
-            end
-        end
-    end
-end
-
-function ItemPropsPitch.RevertAggregatedPitchChanges(items, base_values)
-    local delta = -ItemPropsPitch.GetAccumulatedPitch()
-    if math.abs(delta) < 0.001 then
-        ItemPropsPitch.ResetAccumulatedPitch()
-        return
-    end
-    Utils.with_undo("Reset Pitch", function()
-        ItemPropsPitch.UpdateAccumulatedPitch(delta)
-    end)
-    ItemPropsPitch.ResetAccumulatedPitch()
-    if base_values then
-        for i, item in ipairs(items) do
-            local take = r.GetActiveTake(item)
-            if take and base_values[i] then
-                base_values[i].pitch = ItemPropsPitch.GetPitch(take)
-            end
-        end
-    end
-end
-
-function ItemPropsPitch.GetAggregatedPitch(items)
-    if r.APIExists and r.APIExists("FIP_GetAggregatedPitch") then
-        local s = r.FIP_GetAggregatedPitch("", 0) or ""
-        if s == "" or s == "MIXED" then return 0 end
-        return tonumber(s) or 0
-    end
-    return 0
 end
 
 return ItemPropsPitch
